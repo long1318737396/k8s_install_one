@@ -466,3 +466,10 @@ helm repo add minio-operator https://operator.min.io
 helm repo add openebs https://openebs.github.io/charts
 
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+
+helm upgrade --install nfs-subdir-external-provisioner ./nfs-subdir-external-provisioner --namespace=environment --create-namespace \
+    --set nfs.server="${local_ip}" \
+    --set nfs.path="${nfs_path}" \
+    --set storageClass.name=nfs-client \
+    --set image.repository=k8s.dockerproxy.com/sig-storage/nfs-subdir-external-provisioner \
+    --set-string nfs.mountOptions={"soft,timeo=600,intr,retry=5,retrans=2,proto=tcp,vers=3"}
