@@ -414,6 +414,10 @@ kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs
 if [ $? -ne 0 ];then
   echo "failed"
   exit 1
+else
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
 fi
 
 helm repo add cilium https://helm.cilium.io/
