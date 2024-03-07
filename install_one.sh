@@ -120,12 +120,12 @@ fi
 showmount -e localhost
 #--------安装k8s相关组件----------
 
-wget --no-check-certificate https://dl.k8s.io/release/${k8s_version}/bin/linux/amd64/kubelet
-wget --no-check-certificate https://dl.k8s.io/release/${k8s_version}/bin/linux/amd64/kubectl
-wget --no-check-certificate https://dl.k8s.io/release/${k8s_version}/bin/linux/amd64/kubeadm
+curl -fSL -o kubelet https://dl.k8s.io/release/${k8s_version}/bin/linux/amd64/kubelet
+curl -fSL -o kubectl https://dl.k8s.io/release/${k8s_version}/bin/linux/amd64/kubectl
+curl -fSL -o kubeadm https://dl.k8s.io/release/${k8s_version}/bin/linux/amd64/kubeadm
 /bin/cp kube* /usr/local/bin/
 chmod +x /usr/local/bin/kube*
-wget https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz
+curl -fSL  https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz -o nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz
 tar zxvf nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz -C /usr/local/
 /bin/cp /usr/local/lib/systemd/system/*.service /etc/systemd/system/
 mkdir -p /opt/cni/bin
@@ -151,15 +151,15 @@ fi
 
 
 
-wget https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-x86_64
+curl -fSL -o docker-compose-linux-x86_64 https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-x86_64
 /bin/cp docker-compose-linux-x86_64 /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 
 
-wget https://download.docker.com/linux/static/stable/x86_64/docker-${docker_version}.tgz
+curl -fSL -o docker.tgz https://download.docker.com/linux/static/stable/x86_64/docker-${docker_version}.tgz
 
 tar -zxvf docker-${docker_version}.tgz 
-cp docker/docker* /usr/local/bin/
+/bin/cp docker/docker* /usr/local/bin/
 
 sudo cat > /usr/lib/systemd/system/docker.service << EOF
 [Unit]
@@ -303,7 +303,9 @@ curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/${CRICTL
 curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | sudo tee /etc/systemd/system/kubelet.service
 sudo mkdir -p /etc/systemd/system/kubelet.service.d
 curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-wget https://get.helm.sh/helm-v${helm_version}-linux-amd64.tar.gz
+curl -sSL  "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+curl -sSL -o helm-v${helm_version}-linux-amd64.tar.gz https://get.helm.sh/helm-v${helm_version}-linux-amd64.tar.gz
 tar -zxvf helm-v${helm_version}-linux-amd64.tar.gz
 cp linux-amd64/helm /usr/local/bin/
 
@@ -470,7 +472,7 @@ helm repo add openebs https://openebs.github.io/charts
 
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
 
-helm upgrade --install nfs-subdir-external-provisioner ./nfs-subdir-external-provisioner --namespace=environment --create-namespace \
+helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace=environment --create-namespace \
     --set nfs.server="${local_ip}" \
     --set nfs.path="${nfs_path}" \
     --set storageClass.name=nfs-client \
