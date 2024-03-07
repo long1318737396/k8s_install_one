@@ -22,23 +22,22 @@ if [ -f /etc/debian_version ]; then
   systemctl disable ufw
   apt update
    packages=(
-    wget* 
-    vim* 
-    conntrack* 
-    socat* 
-    ipvsadm* 
-    ipset* 
-    nmap* 
-    telnet* 
-    dnsutils*  
+    wget
+    vim
+    conntrack
+    socat
+    ipvsadm
+    ipset
+    telnet
+    dnsutils
     nfs-kernel-server
     nfs-common
-    unzip* 
-    bash-completion* 
-    tcpdump* 
-    mtr* 
-    nftables* 
-    iproute-tc*
+    unzip
+    bash-completion
+    tcpdump
+    mtr
+    nftables
+    iproute-tc
     iptables
     curl
     git
@@ -50,22 +49,22 @@ elif [ -f /etc/redhat-release ]; then
   systemctl stop firewalld
   systemctl disable firewalld
   packages=(
-    wget* 
-    vim* 
-    conntrack* 
-    socat* 
-    ipvsadm* 
-    ipset* 
-    nmap* 
-    telnet* 
-    bind-utils*  
-    nfs-utils* 
-    unzip* 
-    bash-completion* 
-    tcpdump* 
-    mtr* 
-    nftables* 
-    iproute-tc*
+    wget
+    vim
+    conntrack
+    socat
+    ipvsadm
+    ipset
+    nmap
+    telnet
+    bind-utils
+    nfs-utils
+    unzip
+    bash-completion
+    tcpdump
+    mtr
+    nftables
+    iproute-tc
   )
 
   for i in ${packages[@]};do
@@ -75,22 +74,21 @@ else
     systemctl stop firewalld
     systemctl disable firewalld
     packages=(
-    wget* 
-    vim* 
-    conntrack* 
-    socat* 
-    ipvsadm* 
-    ipset* 
-    nmap* 
-    telnet* 
-    bind-utils*  
-    nfs-utils* 
-    unzip* 
-    bash-completion* 
-    tcpdump* 
-    mtr* 
-    nftables* 
-    iproute-tc*
+    wget
+    vim
+    conntrack
+    socat
+    ipvsadm
+    ipset
+    telnet
+    bind-utils
+    nfs-utils
+    unzip
+    bash-completion
+    tcpdump
+    mtr
+    nftables
+    iproute-tc
   )
 
   for i in ${packages[@]};do
@@ -129,15 +127,27 @@ chmod +x /usr/local/bin/kube*
 wget https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz
 tar zxvf nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz -C /usr/local/
 /bin/cp /usr/local/lib/systemd/system/*.service /etc/systemd/system/
+mkdir -p /opt/cni/bin
+/bin/cp /usr/local/libexec/cni/* /opt/cni/bin/
+
 systemctl enable buildkit containerd 
 systemctl start buildkit containerd 
+if [ $? -ne 0 ];then
+  echo "containerd service start failed"
+  exit 1
+fi
+
 echo "source <(nerdctl completion bash)" >> ~/.bashrc
 mkdir -p /etc/containerd/
 containerd config default > /etc/containerd/config.toml
 sed -i 's/SystemdCgroup\ =\ false/SystemdCgroup\ =\ true/g' /etc/containerd/config.toml
 systemctl restart containerd 
-mkdir -p /opt/cni/bin
-/bin/cp /usr/local/libexec/cni/* /opt/cni/bin/
+if [ $? -ne 0 ];then
+  echo "containerd service restart failed"
+  exit 1
+fi
+
+
 
 
 wget https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-x86_64
@@ -191,6 +201,10 @@ tee /etc/docker/daemon.json <<-'EOF'
 EOF
 
 systemctl enable docker --now
+if [ $? -ne 0 ];then
+  echo "docker service start failed"
+  exit 1
+fi
 docker completion bash > /etc/profile.d/docker.sh
 #source /etc/profile.d/docker.sh 
 
@@ -395,7 +409,12 @@ clusterDNS:
 cgroupDriver: systemd
 EOF
 
+kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs
 
+if [ $? -ne 0 ];then
+  echo "failed"
+  exit 1
+fi
 
 helm repo add cilium https://helm.cilium.io/
 helm repo update
@@ -424,7 +443,11 @@ helm upgrade --install cilium cilium/cilium --namespace=kube-system  --version 1
   --set bpf.masquerade=true \
   --set autoDirectNodeRoutes=true
 
-kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs
+if [ $? -ne 0 ];then
+  echo "failed"
+  exit 1
+fi
+
 kubectl taint node master node-role.kubernetes.io/control-plane:NoSchedule-
 kubectl create deployment net-tools --image long1318737396/net-tools
 kubectl expose deployment net-tools --port 80 --target-port 80 --type NodePort
