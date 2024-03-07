@@ -355,14 +355,15 @@ nodeRegistration:
 ---
 apiServer:
   timeoutForControlPlane: 4m0s
+  extraArgs:
+    default-not-ready-toleration-seconds: "300"
+    default-unreachable-toleration-seconds: "300"
 apiVersion: kubeadm.k8s.io/v1beta3
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controllerManager:
   extraArgs:
     node-cidr-mask-size-ipv4: "24"
-    default-not-ready-toleration-seconds: "300"
-    default-unreachable-toleration-seconds: "300"
   certSANs:
     - vip.cluster.local
     - 127.0.0.1
@@ -378,11 +379,6 @@ etcd:
     extraArgs:
       quota-backend-bytes: "32768000000"
       auto-compaction-mode: periodic
-    extraVolumes:
-    - name: timezone
-      hostPath: /etc/localtime
-      mountPath: /etc/localtime
-      readOnly: true
 imageRepository: registry.k8s.io
 kind: ClusterConfiguration
 kubernetesVersion: 1.29.2
