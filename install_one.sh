@@ -16,6 +16,7 @@ helm_version='3.14.1'
 local_ip=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}' | awk 'NR==1{print}')
 #---------------------------------
 
+hostnamectl set-hostname master1
 #-----------------安装基础软件包------------
 if [ -f /etc/debian_version ]; then
   systemctl stop ufw
@@ -412,9 +413,11 @@ if [ $? -ne 0 ];then
   exit 1
 else
   mkdir -p $HOME/.kube
-  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo /bin/cp  /etc/kubernetes/admin.conf $HOME/.kube/config
   sudo chown $(id -u):$(id -g) $HOME/.kube/config
 fi
+
+kubectl taint node master node-role.kubernetes.io/control-plane:NoSchedule-
 
 helm repo add cilium https://helm.cilium.io/
 helm repo update
@@ -448,7 +451,7 @@ if [ $? -ne 0 ];then
   exit 1
 fi
 
-kubectl taint node master node-role.kubernetes.io/control-plane:NoSchedule-
+
 kubectl create deployment net-tools --image long1318737396/net-tools
 kubectl expose deployment net-tools --port 80 --target-port 80 --type NodePort
 
