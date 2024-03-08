@@ -202,6 +202,8 @@ echo "source <(nerdctl completion bash)" >> ~/.bashrc
 mkdir -p /etc/containerd/
 containerd config default > /etc/containerd/config.toml
 sed -i 's/SystemdCgroup\ =\ false/SystemdCgroup\ =\ true/g' /etc/containerd/config.toml
+sed -i  's|sandbox_image = "registry.k8s.io/pause:3.8"|sandbox_image = "registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.9"|g' /etc/containerd/config.toml
+
 systemctl restart containerd 
 if [ $? -ne 0 ];then
   echo "containerd service restart failed"
@@ -470,6 +472,8 @@ kind: KubeletConfiguration
 clusterDNS:
 - 10.96.0.10
 cgroupDriver: systemd
+containerRuntimeEndpoint: unix:///var/run/containerd/containerd.sock
+imageServiceEndpoint: unix:///var/run/containerd/containerd.sock
 EOF
 
 if [ "$zone" == "cn" ];then
