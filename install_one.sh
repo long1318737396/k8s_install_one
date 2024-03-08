@@ -547,7 +547,6 @@ helm repo add minio-operator https://operator.min.io
 helm repo add openebs https://openebs.github.io/charts
 
 kubectl apply -f https://mirror.ghproxy.com/https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
-kubectl apply -f https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml
 curl -fsSL https://addons.kuboard.cn/kuboard/kuboard-static-pod.sh -o kuboard.sh
 bash kuboard.sh
 kubectl apply -f https://mirror.ghproxy.com/https://raw.githubusercontent.com/metallb/metallb/v0.14.3/config/manifests/metallb-frr-k8s.yaml
@@ -561,7 +560,12 @@ helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provi
     --set-string nfs.mountOptions={"soft,timeo=600,intr,retry=5,retrans=2,proto=tcp,vers=3"} \
     --set storageClass.defaultClass=true
 
+
+##----对k8s镜像进行替换---------
 if [ "$zone" == "cn" ];then
-  echo "test"
+  kubectl set image  -n environment deployment nfs-subdir-external-provisioner nfs-subdir-external-provisioner=k8s.dockerproxy.com/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+  curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml | sed 's|registry.k8s.io|k8s.dockerproxy.com|g' | kubectl apply -f -
+else 
+  curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml  | kubectl apply -f -
 fi
   
