@@ -145,8 +145,8 @@ cfssl_certinfo="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_v
 docker_compose_url="https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-${arch1}"
 crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${crictl_version}/crictl-${crictl_version}-linux-$arch.tar.gz"
 
+curl -sSfL -o docker-${docker_version}.tgz ${docker_url}
 packages=(
-  $docker_url
   $nerdctl_full_url
   $crictl_url
   $etcd_url
@@ -254,7 +254,7 @@ tee /etc/docker/daemon.json <<-'EOF'
     "live-restore": true
 }
 EOF
-
+sed -i "s|\${docker_data_root}|$docker_data_root|g" /etc/docker/daemon.json
 systemctl enable docker --now
 if [ $? -ne 0 ];then
   echo "docker service start failed"
@@ -535,6 +535,12 @@ helm repo add minio-operator https://operator.min.io
 helm repo add openebs https://openebs.github.io/charts
 
 kubectl apply -f https://mirror.ghproxy.com/https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+kubectl apply -f https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml
+curl -fsSL https://addons.kuboard.cn/kuboard/kuboard-static-pod.sh -o kuboard.sh
+bash kuboard.sh
+kubectl apply -f https://mirror.ghproxy.com/https://raw.githubusercontent.com/metallb/metallb/v0.14.3/config/manifests/metallb-frr-k8s.yaml
+
+
 
 helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace=environment --create-namespace \
     --set nfs.server="${local_ip}" \
@@ -542,3 +548,8 @@ helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provi
     --set storageClass.name=nfs-client \
     --set-string nfs.mountOptions={"soft,timeo=600,intr,retry=5,retrans=2,proto=tcp,vers=3"} \
     --set storageClass.defaultClass=true
+
+if [ "$zone" == "cn" ];then
+  echo "test"
+fi
+  
