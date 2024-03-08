@@ -4,15 +4,26 @@ mkdir -p /data/software
 cd /data/software
 #-----------变量配置--------------
 nfs_path=/data/k8s/nfs
+docker_data_root=/data/docker
+etcd_data=/data/etcd
 nerdctl_full_version=1.7.4
 docker_version=25.0.3
 k8s_version=v1.29.2
-docker_compose_version='v2.24.6'
-CRICTL_VERSION="v1.29.0"
-ARCH="amd64"
-DOWNLOAD_DIR="/usr/local/bin"
-RELEASE_VERSION="v0.15.1"
-helm_version='3.14.1'
+kubernetes_server_version=1.29.2
+skopeo_version=v1.14.2
+hubble_version=v0.13.0
+velero_version=v1.13.0
+cilium_version=v0.15.23
+docker_compose_version=v2.24.6
+crictl_version=v1.29.0
+cfssl_version=1.6.4
+etcd_version=v3.5.12
+arch=amd64
+arch1=x86_64
+bin_dir=/usr/local/bin
+RELEASE_VERSION=v0.15.1
+helm_version=3.14.1
+base_url=https://mirrors.chenby.cn
 local_ip=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}' | awk 'NR==1{print}')
 #---------------------------------
 
@@ -118,14 +129,63 @@ else
   systemctl start nfs-server
 fi
 showmount -e localhost
-#--------安装k8s相关组件----------
 
-curl -fSL -o kubelet https://dl.k8s.io/release/${k8s_version}/bin/linux/amd64/kubelet
-curl -fSL -o kubectl https://dl.k8s.io/release/${k8s_version}/bin/linux/amd64/kubectl
-curl -fSL -o kubeadm https://dl.k8s.io/release/${k8s_version}/bin/linux/amd64/kubeadm
-/bin/cp kube* /usr/local/bin/
-chmod +x /usr/local/bin/kube*
-curl -fSL  https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz -o nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz
+#-----大陆区下载----------------
+docker_url="https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable/${arch1}/docker-${docker_version}.tgz"
+nerdctl_full_url="https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-$arch.tar.gz"
+kubernetes_server_url="https://storage.googleapis.com/kubernetes-release/release/v${kubernetes_server_version}/kubernetes-server-linux-${arch}.tar.gz"
+skopeo_url="https://github.com/lework/skopeo-binary/releases/download/${skopeo_version}/skopeo-linux-${arch}"
+cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-${arch}.tar.gz"
+hubble_url="https://github.com/cilium/hubble/releases/download/${hubble_version}/hubble-linux-${arch}.tar.gz"
+velero_url="https://github.com/vmware-tanzu/velero/releases/download/${velero_version}/velero-${velero_version}-linux-${arch}.tar.gz"
+etcd_url="https://github.com/etcd-io/etcd/releases/download/${etcd_version}/etcd-${etcd_version}-linux-${arch}.tar.gz"
+cfssl_url="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssl_${cfssl_version}_linux_${arch}"
+cfssljson_url="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssljson_${cfssl_version}_linux_${arch}"
+cfssl_certinfo="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssl-certinfo_${cfssl_version}_linux_${arch}"
+docker_compose_url="https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-${arch1}"
+crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${crictl_version}/crictl-${crictl_version}-linux-$arch.tar.gz"
+
+packages=(
+  $docker_url
+  $nerdctl_full_url
+  $crictl_url
+  $etcd_url
+  $cfssl_url
+  $cfssljson_url
+  $cfssl_certinfo
+  $kubernetes_server_url
+  $docker_compose_url
+  $cilium_url
+  $hubble_url
+  $velero_url
+  $skopeo_url
+)
+
+if [ $zone == "cn" ];then
+ 
+  for package_url in "${packages[@]}"; do
+    filename=$(basename "$package_url")
+    if curl  -k -L -C - -o "$filename" ${base_url}/"$package_url"; then
+      echo "Downloaded $filename"
+    else
+      echo "Failed to download $filename"
+      exit 1
+    fi
+  done
+else
+  for package_url in "${packages[@]}"; do
+    filename=$(basename "$package_url")
+    if curl  -k -L -C - -o "$filename" "$package_url"; then
+      echo "Downloaded $filename"
+    else
+      echo "Failed to download $filename"
+      exit 1
+    fi
+  done
+fi
+
+
+#--------安装containerd相关组件----------
 tar zxvf nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz -C /usr/local/
 /bin/cp /usr/local/lib/systemd/system/*.service /etc/systemd/system/
 mkdir -p /opt/cni/bin
@@ -148,16 +208,10 @@ if [ $? -ne 0 ];then
   exit 1
 fi
 
-
-
-
-curl -fSL -o docker-compose-linux-x86_64 https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-x86_64
 /bin/cp docker-compose-linux-x86_64 /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 
-
-curl -fSL -o docker.tgz https://download.docker.com/linux/static/stable/x86_64/docker-${docker_version}.tgz
-
+#-------安装docker相关组件----------
 tar -zxvf docker-${docker_version}.tgz 
 /bin/cp docker/docker* /usr/local/bin/
 
@@ -190,7 +244,7 @@ tee /etc/docker/daemon.json <<-'EOF'
     "exec-opts": ["native.cgroupdriver=systemd"],
     "insecure-registries" : ["registry.mydomain.com:5000"],
     "log-driver": "json-file",
-    "data-root": "/data/docker",
+    "data-root": "${docker_data_root}",
     "log-opts": {
         "max-size": "100m",
         "max-file": "10"
@@ -219,11 +273,11 @@ timeout: 10
 #debug: true"  > /etc/crictl.yaml
 
 
+#-----系统初始化----------
 
 sed -i 's/.*swap.*/#&/' /etc/fstab
 swapoff -a && sysctl -w vm.swappiness=0
 sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
-
 
 tee /etc/modules-load.d/10-k8s-modules.conf <<EOF
 sunrpc
@@ -289,23 +343,50 @@ sysctl -p /etc/sysctl.d/95-k8s-sysctl.conf
 
 
 
-sudo mkdir -p "$DOWNLOAD_DIR"
-
-curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/${CRICTL_VERSION}/crictl-${CRICTL_VERSION}-linux-${ARCH}.tar.gz" |tar -C $DOWNLOAD_DIR -xz
-
-#RELEASE="$(curl -sSL https://dl.k8s.io/release/stable.txt)"
+sudo mkdir -p "$bin_dir"
 
 
-#sudo curl -L --remote-name-all https://dl.k8s.io/release/${RELEASE}/bin/linux/${ARCH}/{kubeadm,kubelet,kubectl}
+##-------安装k8s相关组件----------
+crictl-${crictl_version}-linux-$arch.tar.gz -C /usr/local/bin/
+chmod +x /usr/local/bin/crictl
+tar -zxvf kubernetes-server-linux-${arch}.tar.gz
+/bin/cp kubernetes/server/bin/{kubelet,kubectl,kubeadm} $bin_dir/
+chmod +x $bin_dir/{kubeadm,kubelet,kubectl}
+
+tee /etc/systemd/system/kubelet.service <<EOF
+[Unit]
+Description=kubelet: The Kubernetes Node Agent
+Documentation=https://kubernetes.io/docs/home/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/kubelet
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 
+mkdir -p /etc/systemd/system/kubelet.service.d
+tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf <<EOF
+# Note: This dropin only works with kubeadm and kubelet v1.11+
+[Service]
+Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
+Environment="KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml"
+# This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically
+EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env
+# This is a file that the user can use for overrides of the kubelet args as a last resort. Preferably, the user should use
+# the .NodeRegistration.KubeletExtraArgs object in the configuration files instead. KUBELET_EXTRA_ARGS should be sourced from this file.
+EnvironmentFile=-/etc/default/kubelet
+ExecStart=
+ExecStart=/usr/local/bin/kubelet \$KUBELET_KUBECONFIG_ARGS \$KUBELET_CONFIG_ARGS \$KUBELET_KUBEADM_ARGS \$KUBELET_EXTRA_ARGS
+EOF
 
-curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | sudo tee /etc/systemd/system/kubelet.service
-sudo mkdir -p /etc/systemd/system/kubelet.service.d
-curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-curl -sSL  "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-
-curl -sSL -o helm-v${helm_version}-linux-amd64.tar.gz https://get.helm.sh/helm-v${helm_version}-linux-amd64.tar.gz
+curl -sSL -o helm-v${helm_version}-linux-amd64.tar.gz "https://mirrors.huaweicloud.com/helm/v${helm_version}/helm-v${helm_version}-linux-${arch}.tar.gz"
 tar -zxvf helm-v${helm_version}-linux-amd64.tar.gz
 cp linux-amd64/helm /usr/local/bin/
 
@@ -316,23 +397,6 @@ echo "source <(kubeadm completion bash)" >> ~/.bashrc
 
 kubeadm config print init-defaults > kubeadm-init.yaml
 kubeadm config print join-defaults > kubeadm-join.yaml
-
-CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
-CLI_ARCH=amd64
-if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
-curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
-sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
-sudo tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
-
-HUBBLE_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/hubble/master/stable.txt)
-HUBBLE_ARCH=amd64
-if [ "$(uname -m)" = "aarch64" ]; then HUBBLE_ARCH=arm64; fi
-curl -L --fail --remote-name-all https://github.com/cilium/hubble/releases/download/$HUBBLE_VERSION/hubble-linux-${HUBBLE_ARCH}.tar.gz{,.sha256sum}
-sha256sum --check hubble-linux-${HUBBLE_ARCH}.tar.gz.sha256sum
-sudo tar xzvfC hubble-linux-${HUBBLE_ARCH}.tar.gz /usr/local/bin
-rm hubble-linux-${HUBBLE_ARCH}.tar.gz{,.sha256sum}
-
-
 
 
 tee kubeadm-${k8s_version}-init.yaml <<EOF
@@ -378,7 +442,7 @@ controllerManager:
 dns: {}
 etcd:
   local:
-    dataDir: /data/etcd
+    dataDir: ${etcd_data}
     extraArgs:
       quota-backend-bytes: "32768000000"
       auto-compaction-mode: periodic
@@ -470,7 +534,7 @@ helm repo add metallb https://metallb.github.io/metallb
 helm repo add minio-operator https://operator.min.io
 helm repo add openebs https://openebs.github.io/charts
 
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+kubectl apply -f https://mirror.ghproxy.com/https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
 
 helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace=environment --create-namespace \
     --set nfs.server="${local_ip}" \
