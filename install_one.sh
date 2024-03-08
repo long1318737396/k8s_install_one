@@ -347,7 +347,7 @@ sudo mkdir -p "$bin_dir"
 
 
 ##-------安装k8s相关组件----------
-crictl-${crictl_version}-linux-$arch.tar.gz -C /usr/local/bin/
+tar -zxvf crictl-${crictl_version}-linux-$arch.tar.gz -C /usr/local/bin/
 chmod +x /usr/local/bin/crictl
 tar -zxvf kubernetes-server-linux-${arch}.tar.gz
 /bin/cp kubernetes/server/bin/{kubelet,kubectl,kubeadm} $bin_dir/
@@ -505,12 +505,16 @@ helm upgrade --install cilium cilium/cilium --namespace=kube-system  --version 1
   --set hubble.relay.prometheus.enabled=true \
   --set hubble.relay.pprof.enabled=true \
   --set hubble.ui.enabled=true \
+  --set hubble.ui.service.type=NodePort \
   --set hubble.metrics.enabled="{dns:query;ignoreAAAA,drop,tcp,flow,icmp,http}" \
+  --set hubble.metrics.dashboards.enabled=true \
   --set ingressController.enabled=true \
+  --set ingressController.service.type=NodePort \
   --set debug.enabled=true \
   --set operator.replicas=1 \
   --set bpf.masquerade=true \
-  --set autoDirectNodeRoutes=true
+  --set autoDirectNodeRoutes=true \
+  --set gatewayAPI.enabled=true
 
 if [ $? -ne 0 ];then
   echo "failed"
