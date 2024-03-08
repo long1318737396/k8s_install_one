@@ -146,6 +146,7 @@ docker_compose_url="https://github.com/docker/compose/releases/download/${docker
 crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${crictl_version}/crictl-${crictl_version}-linux-$arch.tar.gz"
 
 curl -sSfL -o docker-${docker_version}.tgz ${docker_url}
+curl -sSfL -o kubernetes-server-linux-${arch}.tar.gz ${kubernetes_server_url}
 packages=(
   $nerdctl_full_url
   $crictl_url
@@ -153,7 +154,6 @@ packages=(
   $cfssl_url
   $cfssljson_url
   $cfssl_certinfo
-  $kubernetes_server_url
   $docker_compose_url
   $cilium_url
   $hubble_url
