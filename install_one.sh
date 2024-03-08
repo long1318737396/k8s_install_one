@@ -188,8 +188,18 @@ fi
 #--------安装containerd相关组件----------
 tar -zxvf cilium-linux-amd64.tar.gz -C /usr/local/bin
 tar -zxvf hubble-linux-amd64.tar.gz -C /usr/local/bin
-cp skopeo-linux-amd64 /usr/local/bin/skopeo
+/bin/cp skopeo-linux-amd64 /usr/local/bin/skopeo
 chmod +x /usr/local/bin/{cilium,hubble,skopeo}
+
+/bin/cp cfssl_1.6.4_linux_amd64  /usr/local/bin/cfssl
+/bin/cp cfssl-certinfo_1.6.4_linux_amd64  /usr/local/bin/cfssl-certinfo
+/bin/cp cfssljson_1.6.4_linux_amd64  /usr/local/bin/cfssljson
+
+chmod +x /usr/local/bin/{cfssl,cfssl-certinfo,cfssljson}
+
+tar -zxvf etcd-${etcd_version}-linux-amd64.tar.gz -C /usr/local/bin/ --strip-components=1
+
+chmod +x /usr/local/bin/etcd*
 
 tar zxvf nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz -C /usr/local/
 /bin/cp /usr/local/lib/systemd/system/*.service /etc/systemd/system/
