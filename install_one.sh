@@ -472,6 +472,10 @@ clusterDNS:
 cgroupDriver: systemd
 EOF
 
+if [ "$zone" == "cn" ];then
+  sed -i 's|imageRepository: registry.k8s.io|imageRepository: registry.cn-hangzhou.aliyuncs.com/google_containers|g' kubeadm-${k8s_version}-init.yaml
+fi
+
 kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs
 
 if [ $? -ne 0 ];then
