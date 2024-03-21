@@ -23,7 +23,7 @@ arch1=x86_64
 bin_dir=/usr/local/bin
 RELEASE_VERSION=v0.15.1
 helm_version=3.14.1
-base_url=https://mirrors.chenby.cn
+base_url=https://mirror.ghproxy.com
 local_ip=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}' | awk 'NR==1{print}')
 #---------------------------------
 
@@ -146,7 +146,8 @@ docker_compose_url="https://github.com/docker/compose/releases/download/${docker
 crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${crictl_version}/crictl-${crictl_version}-linux-$arch.tar.gz"
 
 curl -sSfL -o docker-${docker_version}.tgz ${docker_url}
-curl -sSfL -o kubernetes-server-linux-${arch}.tar.gz ${kubernetes_server_url}
+#curl -sSfL -o kubernetes-server-linux-${arch}.tar.gz ${kubernetes_server_url}
+curl sSfL -o kubernetes-server-linux-${arch}.tar.gz https://jefftommy.oss-cn-hangzhou.aliyuncs.com/software/v1.29.2/kubernetes-server-linux-amd64.tar.gz
 packages=(
   $nerdctl_full_url
   $crictl_url
@@ -491,11 +492,37 @@ containerRuntimeEndpoint: unix:///var/run/containerd/containerd.sock
 imageServiceEndpoint: unix:///var/run/containerd/containerd.sock
 EOF
 
+
+tee kubeadm-join-node.yaml <<EOF
+apiVersion: kubeadm.k8s.io/v1beta3
+caCertPath: /etc/kubernetes/pki/ca.crt
+discovery:
+  bootstrapToken: ${master_ip}:6443
+    token: abcdef.0123456789abcdef
+    unsafeSkipCAVerification: true
+  timeout: 5m0s
+  tlsBootstrapToken: abcdef.0123456789abcdef
+kind: JoinConfiguration
+nodeRegistration:
+  kubeletExtraArgs:
+    cgroupDriver: systemd
+  criSocket: unix:///var/run/containerd/containerd.sock
+  imagePullPolicy: IfNotPresent
+  taints: null
+EOF
+
+
+
 if [ "$zone" == "cn" ];then
   sed -i 's|imageRepository: registry.k8s.io|imageRepository: registry.cn-hangzhou.aliyuncs.com/google_containers|g' kubeadm-${k8s_version}-init.yaml
 fi
 
-kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs
+if [ "role" == "node" ];then
+  kubeadm join --config kubeadm-join-node.yaml
+else
+  kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs
+fi
+
 
 if [ $? -ne 0 ];then
   echo "failed"
@@ -506,69 +533,76 @@ else
   sudo chown $(id -u):$(id -g) $HOME/.kube/config
 fi
 
-kubectl taint node master node-role.kubernetes.io/control-plane:NoSchedule-
+if [ "role" == "node" ];then
+  echo "this is node"
+else 
+  kubectl taint node master node-role.kubernetes.io/control-plane:NoSchedule-
+  kubectl apply -f https://mirror.ghproxy.com/https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+  helm repo add cilium https://helm.cilium.io/
+  helm repo update
+  helm upgrade --install cilium cilium/cilium --namespace=kube-system  --version 1.15.1 \
+    --set routingMode=native \
+    --set kubeProxyReplacement=strict \
+    --set bandwidthManager.enabled=true \
+    --set ipam.mode=kubernetes \
+    --set k8sServiceHost=${local_ip} \
+    --set k8sServicePort=6443 \
+    --set ipv4NativeRoutingCIDR=10.244.0.0/16 \
+    --set operate.pprof=true \
+    --set operate.prometheus.enabled=true \
+    --set prometheus.enabled=true \
+    --set pprof.enabled=true \
+    --set nodePort.enabled=true \
+    --set monitor.enabled=true \
+    --set hubble.relay.enabled=true \
+    --set hubble.relay.prometheus.enabled=true \
+    --set hubble.relay.pprof.enabled=true \
+    --set hubble.ui.enabled=true \
+    --set hubble.ui.service.type=NodePort \
+    --set hubble.metrics.enabled="{dns:query;ignoreAAAA,drop,tcp,flow,icmp,http}" \
+    --set hubble.metrics.dashboards.enabled=true \
+    --set ingressController.enabled=true \
+    --set ingressController.service.type=NodePort \
+    --set debug.enabled=true \
+    --set operator.replicas=1 \
+    --set bpf.masquerade=true \
+    --set autoDirectNodeRoutes=true \
+    --set gatewayAPI.enabled=true \
+    --set l2announcements.enabled=true \
+    --set l2podAnnouncements.enabled=true \
+    --set loadBalancer.mode=dsr \
+    --set loadBalancer.acceleration=native
 
-helm repo add cilium https://helm.cilium.io/
-helm repo update
-helm upgrade --install cilium cilium/cilium --namespace=kube-system  --version 1.15.1 \
-  --set routingMode=native \
-  --set kubeProxyReplacement=strict \
-  --set bandwidthManager.enabled=true \
-  --set ipam.mode=kubernetes \
-  --set k8sServiceHost=${local_ip} \
-  --set k8sServicePort=6443 \
-  --set ipv4NativeRoutingCIDR=10.244.0.0/16 \
-  --set operate.pprof=true \
-  --set operate.prometheus.enabled=true \
-  --set prometheus.enabled=true \
-  --set pprof.enabled=true \
-  --set nodePort.enabled=true \
-  --set monitor.enabled=true \
-  --set hubble.relay.enabled=true \
-  --set hubble.relay.prometheus.enabled=true \
-  --set hubble.relay.pprof.enabled=true \
-  --set hubble.ui.enabled=true \
-  --set hubble.ui.service.type=NodePort \
-  --set hubble.metrics.enabled="{dns:query;ignoreAAAA,drop,tcp,flow,icmp,http}" \
-  --set hubble.metrics.dashboards.enabled=true \
-  --set ingressController.enabled=true \
-  --set ingressController.service.type=NodePort \
-  --set debug.enabled=true \
-  --set operator.replicas=1 \
-  --set bpf.masquerade=true \
-  --set autoDirectNodeRoutes=true \
-  --set gatewayAPI.enabled=true
-
-if [ $? -ne 0 ];then
-  echo "failed"
-  exit 1
-fi
-
-
-kubectl create deployment net-tools --image long1318737396/net-tools
-kubectl expose deployment net-tools --port 80 --target-port 80 --type NodePort
-
-
-helm repo add cilium https://helm.cilium.io/
-helm repo add projectcalico https://docs.tigera.io/calico/charts
-helm repo add apollo https://charts.apolloconfig.com
-helm repo add flannel https://flannel-io.github.io/flannel/
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
-helm repo add grafana https://grafana.github.io/helm-charts
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx 
-helm repo add metallb https://metallb.github.io/metallb
-helm repo add minio-operator https://operator.min.io
-helm repo add openebs https://openebs.github.io/charts
-
-kubectl apply -f https://mirror.ghproxy.com/https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
-curl -fsSL https://addons.kuboard.cn/kuboard/kuboard-static-pod.sh -o kuboard.sh
-bash kuboard.sh
-kubectl apply -f https://mirror.ghproxy.com/https://raw.githubusercontent.com/metallb/metallb/v0.14.3/config/manifests/metallb-frr-k8s.yaml
+  if [ $? -ne 0 ];then
+    echo "failed"
+    exit 1
+  fi
 
 
+  kubectl create deployment net-tools --image long1318737396/net-tools
+  kubectl expose deployment net-tools --port 80 --target-port 80 --type NodePort
 
-helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace=environment --create-namespace \
+
+  helm repo add cilium https://helm.cilium.io/
+  helm repo add projectcalico https://docs.tigera.io/calico/charts
+  helm repo add apollo https://charts.apolloconfig.com
+  helm repo add flannel https://flannel-io.github.io/flannel/
+  helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+  helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+  helm repo add grafana https://grafana.github.io/helm-charts
+  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx 
+  helm repo add metallb https://metallb.github.io/metallb
+  helm repo add minio-operator https://operator.min.io
+  helm repo add openebs https://openebs.github.io/charts
+
+  
+  curl -fsSL https://addons.kuboard.cn/kuboard/kuboard-static-pod.sh -o kuboard.sh
+  bash kuboard.sh
+  kubectl apply -f https://mirror.ghproxy.com/https://raw.githubusercontent.com/metallb/metallb/v0.14.3/config/manifests/metallb-frr-k8s.yaml
+
+
+
+  helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace=environment --create-namespace \
     --set nfs.server="${local_ip}" \
     --set nfs.path="${nfs_path}" \
     --set storageClass.name=nfs-client \
@@ -577,10 +611,10 @@ helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provi
 
 
 ##----对k8s镜像进行替换---------
-if [ "$zone" == "cn" ];then
-  kubectl set image  -n environment deployment nfs-subdir-external-provisioner nfs-subdir-external-provisioner=k8s.dockerproxy.com/sig-storage/nfs-subdir-external-provisioner:v4.0.2
-  curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml | sed 's|registry.k8s.io|k8s.dockerproxy.com|g' | kubectl apply -f -
-else 
-  curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml  | kubectl apply -f -
+  if [ "$zone" == "cn" ];then
+    kubectl set image  -n environment deployment nfs-subdir-external-provisioner nfs-subdir-external-provisioner=k8s.dockerproxy.com/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+    curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml | sed 's|registry.k8s.io|k8s.dockerproxy.com|g' | kubectl apply -f -
+  else 
+    curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml  | kubectl apply -f -
+  fi
 fi
-  
