@@ -148,9 +148,9 @@ cfssl_certinfo="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_v
 docker_compose_url="https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-${arch1}"
 crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${crictl_version}/crictl-${crictl_version}-linux-$arch.tar.gz"
 
-curl -sSfL -o docker-${docker_version}.tgz ${docker_url}
+curl -SfL -o docker-${docker_version}.tgz ${docker_url}
 #curl -sSfL -o kubernetes-server-linux-${arch}.tar.gz ${kubernetes_server_url}
-curl -sSfL -o kubernetes-server-linux-${arch}.tar.gz https://jefftommy.oss-cn-hangzhou.aliyuncs.com/software/v1.29.2/kubernetes-server-linux-amd64.tar.gz
+curl -SfL -o kubernetes-server-linux-${arch}.tar.gz https://jefftommy.oss-cn-hangzhou.aliyuncs.com/software/v1.29.2/kubernetes-server-linux-amd64.tar.gz
 packages=(
   $nerdctl_full_url
   $crictl_url
@@ -218,6 +218,20 @@ if [ $? -ne 0 ];then
 fi
 
 echo "source <(nerdctl completion bash)" >> ~/.bashrc
+mkdir -p /etc/nerdctl/
+tee /etc/nerdctl/nerdctl.toml <<EOF
+debug             = false
+debug_full        = false
+address           = "unix:///var/run/containerd/containerd.sock"
+namespace         = "k8s.io"
+snapshotter       = "overlayfs"
+cni_path          = "/opt/cni/bin"
+cni_netconfpath   = "/etc/cni/net.d"
+cgroup_manager    = "systemd"
+insecure_registry = true
+hosts_dir         = ["/etc/containerd/certs.d"]
+EOF
+
 mkdir -p /etc/containerd/
 containerd config default > /etc/containerd/config.toml
 sed -i 's/SystemdCgroup\ =\ false/SystemdCgroup\ =\ true/g' /etc/containerd/config.toml
@@ -572,9 +586,7 @@ else
     --set autoDirectNodeRoutes=true \
     --set gatewayAPI.enabled=true \
     --set l2announcements.enabled=true \
-    --set l2podAnnouncements.enabled=true \
-    --set loadBalancer.mode=dsr \
-    --set loadBalancer.acceleration=native
+    --set loadBalancer.mode=dsr
 
   if [ $? -ne 0 ];then
     echo "failed"
