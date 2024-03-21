@@ -26,8 +26,11 @@ helm_version=3.14.1
 base_url=https://mirror.ghproxy.com
 local_ip=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}' | awk 'NR==1{print}')
 #---------------------------------
-
-hostnamectl set-hostname master1
+if [ "$role" == "node" ];then
+  echo "node"
+else
+  hostnamectl set-hostname master1
+fi
 #-----------------安装基础软件包------------
 if [ -f /etc/debian_version ]; then
   systemctl stop ufw
