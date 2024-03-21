@@ -514,7 +514,8 @@ tee kubeadm-join-node.yaml <<EOF
 apiVersion: kubeadm.k8s.io/v1beta3
 caCertPath: /etc/kubernetes/pki/ca.crt
 discovery:
-  bootstrapToken: ${master_ip}:6443
+  bootstrapToken: 
+    apiServerEndpoint: ${master_ip}:6443
     token: abcdef.0123456789abcdef
     unsafeSkipCAVerification: true
   timeout: 5m0s
@@ -522,7 +523,7 @@ discovery:
 kind: JoinConfiguration
 nodeRegistration:
   kubeletExtraArgs:
-    cgroupDriver: systemd
+    cgroup-driver: systemd
   criSocket: unix:///var/run/containerd/containerd.sock
   imagePullPolicy: IfNotPresent
   taints: null
@@ -534,7 +535,7 @@ if [ "$zone" == "cn" ];then
   sed -i 's|imageRepository: registry.k8s.io|imageRepository: registry.cn-hangzhou.aliyuncs.com/google_containers|g' kubeadm-${k8s_version}-init.yaml
 fi
 
-if [ "role" == "node" ];then
+if [ "$role" == "node" ];then
   kubeadm join --config kubeadm-join-node.yaml
 else
   kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs
@@ -550,7 +551,7 @@ else
   sudo chown $(id -u):$(id -g) $HOME/.kube/config
 fi
 
-if [ "role" == "node" ];then
+if [ "$role" == "node" ];then
   echo "this is node"
 else 
   kubectl taint node master node-role.kubernetes.io/control-plane:NoSchedule-
