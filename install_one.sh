@@ -150,7 +150,7 @@ crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${cri
 
 curl -sSfL -o docker-${docker_version}.tgz ${docker_url}
 #curl -sSfL -o kubernetes-server-linux-${arch}.tar.gz ${kubernetes_server_url}
-curl sSfL -o kubernetes-server-linux-${arch}.tar.gz https://jefftommy.oss-cn-hangzhou.aliyuncs.com/software/v1.29.2/kubernetes-server-linux-amd64.tar.gz
+curl -sSfL -o kubernetes-server-linux-${arch}.tar.gz https://jefftommy.oss-cn-hangzhou.aliyuncs.com/software/v1.29.2/kubernetes-server-linux-amd64.tar.gz
 packages=(
   $nerdctl_full_url
   $crictl_url
