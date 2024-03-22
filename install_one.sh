@@ -4,8 +4,9 @@ mkdir -p /data/software
 cd /data/software
 #-----------变量配置--------------
 nfs_path=/data/k8s/nfs
-docker_data_root=/data/docker
-etcd_data=/data/etcd
+docker_data_root=/data/kubernetes/docker
+etcd_data=/data/kubernetes/etcd
+containerd_data="/data/kubernetes/containerd"
 nerdctl_full_version=1.7.4
 docker_version=25.0.3
 k8s_version=v1.29.2
@@ -236,7 +237,7 @@ mkdir -p /etc/containerd/
 containerd config default > /etc/containerd/config.toml
 sed -i 's/SystemdCgroup\ =\ false/SystemdCgroup\ =\ true/g' /etc/containerd/config.toml
 sed -i  's|sandbox_image = "registry.k8s.io/pause:3.8"|sandbox_image = "registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.9"|g' /etc/containerd/config.toml
-
+sed -i "s#/var/lib/containerd#$containerd_data#g" /etc/containerd/config.toml
 systemctl restart containerd 
 if [ $? -ne 0 ];then
   echo "containerd service restart failed"
