@@ -8,7 +8,7 @@ bin_dir=/usr/local/bin
 
 set -x
 kubeadm reset --force
-
+ipvsadm -C
 
 systemctl stop docker
 systemctl disable docker
