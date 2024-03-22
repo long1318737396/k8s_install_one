@@ -502,6 +502,12 @@ mode: ipvs
 ---
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
+serializeImagePulls: false
+containerLogMaxSize: 100Mi
+containerLogMaxFiles: 10
+cpuManagerPolicy: none
+maxPods: 128
+podPidsLimit: 16384
 clusterDNS:
 - 10.96.0.10
 cgroupDriver: systemd
