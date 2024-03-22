@@ -116,6 +116,7 @@ fi
 #--------安装nfs相关组件----------
 
 mkdir -p ${nfs_path}
+mkdir -p ${bin_dir}
 chmod -R 777 ${nfs_path}
 echo "${nfs_path} *(rw,sync,no_root_squash,no_subtree_check)" | sudo tee -a /etc/exports
 exportfs -ra
