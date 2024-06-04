@@ -24,6 +24,7 @@ arch1=x86_64
 bin_dir=/usr/local/bin
 RELEASE_VERSION=v0.15.1
 helm_version=3.14.1
+cni_type=calico
 base_url=https://mirror.ghproxy.com
 local_ip=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}' | awk 'NR==1{print}')
 #---------------------------------
@@ -57,6 +58,7 @@ if [ -f /etc/debian_version ]; then
     iptables
     curl
     git
+    lsof
   )
   for i in ${packages[@]};do
       apt install $i   -y
@@ -81,6 +83,7 @@ elif [ -f /etc/redhat-release ]; then
     mtr
     nftables
     iproute-tc
+    lsof
   )
 
   for i in ${packages[@]};do
@@ -105,6 +108,7 @@ else
     mtr
     nftables
     iproute-tc
+    lsof
   )
 
   for i in ${packages[@]};do
@@ -561,42 +565,49 @@ fi
 
 if [ "$role" == "node" ];then
   echo "this is node"
-else 
+else
+  echo "this is master"
+  
   kubectl taint node master node-role.kubernetes.io/control-plane:NoSchedule-
   kubectl apply -f https://mirror.ghproxy.com/https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
   helm repo add cilium https://helm.cilium.io/
   helm repo update
-  helm upgrade --install cilium cilium/cilium --namespace=kube-system  --version 1.15.1 \
-    --set routingMode=native \
-    --set kubeProxyReplacement=strict \
-    --set bandwidthManager.enabled=true \
-    --set ipam.mode=kubernetes \
-    --set k8sServiceHost=${local_ip} \
-    --set k8sServicePort=6443 \
-    --set ipv4NativeRoutingCIDR=10.244.0.0/16 \
-    --set operate.pprof=true \
-    --set operate.prometheus.enabled=true \
-    --set prometheus.enabled=true \
-    --set pprof.enabled=true \
-    --set nodePort.enabled=true \
-    --set monitor.enabled=true \
-    --set hubble.relay.enabled=true \
-    --set hubble.relay.prometheus.enabled=true \
-    --set hubble.relay.pprof.enabled=true \
-    --set hubble.ui.enabled=true \
-    --set hubble.ui.service.type=NodePort \
-    --set hubble.metrics.enabled="{dns:query;ignoreAAAA,drop,tcp,flow,icmp,http}" \
-    --set hubble.metrics.dashboards.enabled=true \
-    --set ingressController.enabled=true \
-    --set ingressController.service.type=NodePort \
-    --set debug.enabled=true \
-    --set operator.replicas=1 \
-    --set bpf.masquerade=true \
-    --set autoDirectNodeRoutes=true \
-    --set gatewayAPI.enabled=true \
-    --set l2announcements.enabled=true \
-    --set loadBalancer.mode=dsr
-
+  if [ "$cni_type" == "cilium" ];then
+    helm upgrade --install cilium cilium/cilium --namespace=kube-system  --version 1.15.1 \
+      --set routingMode=native \
+      --set kubeProxyReplacement=strict \
+      --set bandwidthManager.enabled=true \
+      --set ipam.mode=kubernetes \
+      --set k8sServiceHost=${local_ip} \
+      --set k8sServicePort=6443 \
+      --set ipv4NativeRoutingCIDR=10.244.0.0/16 \
+      --set operate.pprof=true \
+      --set operate.prometheus.enabled=true \
+      --set prometheus.enabled=true \
+      --set pprof.enabled=true \
+      --set nodePort.enabled=true \
+      --set monitor.enabled=true \
+      --set hubble.relay.enabled=true \
+      --set hubble.relay.prometheus.enabled=true \
+      --set hubble.relay.pprof.enabled=true \
+      --set hubble.ui.enabled=true \
+      --set hubble.ui.service.type=NodePort \
+      --set hubble.metrics.enabled="{dns:query;ignoreAAAA,drop,tcp,flow,icmp,http}" \
+      --set hubble.metrics.dashboards.enabled=true \
+      --set ingressController.enabled=true \
+      --set ingressController.service.type=NodePort \
+      --set debug.enabled=true \
+      --set operator.replicas=1 \
+      --set bpf.masquerade=true \
+      --set autoDirectNodeRoutes=true \
+      --set gatewayAPI.enabled=true \
+      --set l2announcements.enabled=true \
+      --set loadBalancer.mode=dsr
+  elif [ "$cni_type" == "flannel" ];then
+    kubectl apply -f kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+  elif [ "$cni_type" == "calico" ];then
+    kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
+  fi
   if [ $? -ne 0 ];then
     echo "failed"
     exit 1
