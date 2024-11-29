@@ -1,5 +1,14 @@
 #!/bin/bash
 set -x
+arch=`arch`
+if [ "$arch" == "x86_64" ];then
+  ARCH=amd64
+elif [ "$arch" == "aarch64" ];then
+  ARCH=aarch64
+else
+  echo "this arch is not unsupport"
+  exit 1
+fi
 mkdir -p /data/software
 cd /data/software
 #-----------变量配置--------------
@@ -7,32 +16,40 @@ nfs_path=/data/k8s/nfs
 docker_data_root=/data/kubernetes/docker
 etcd_data=/data/kubernetes/etcd
 containerd_data="/data/kubernetes/containerd"
-nerdctl_full_version=1.7.4
-docker_version=25.0.3
-k8s_version=v1.29.2
-kubernetes_server_version=1.29.2
-skopeo_version=v1.14.2
-hubble_version=v0.13.0
-velero_version=v1.13.0
-cilium_version=v0.15.23
-docker_compose_version=v2.24.6
-crictl_version=v1.29.0
-cfssl_version=1.6.4
-etcd_version=v3.5.12
-arch=amd64
-arch1=x86_64
-bin_dir=/usr/local/bin
-RELEASE_VERSION=v0.15.1
-helm_version=3.14.1
+#https://github.com/containerd/nerdctl/releases
+nerdctl_full_version=2.0.0
+#https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable/x86_64/
+docker_version=27.3.1
+#https://github.com/kubernetes/kubernetes/releases
+#k8s_version=v1.29.2
+#kubernetes_server_version=1.29.2
+#https://github.com/lework/skopeo-binary/releases
+skopeo_version=v1.17.0
+#https://github.com/cilium/hubble/releases
+hubble_version=v1.16.4
+#https://github.com/vmware-tanzu/velero/releases
+velero_version=v1.15.0
+#https://github.com/cilium/cilium/releases
+cilium_version=v1.16.4
+#https://github.com/cilium/cilium-cli/releases
+cilium-cli_version=v0.16.20
+#https://github.com/docker/compose/releases
+docker_compose_version=v2.31.0
+#https://github.com/kubernetes-sigs/cri-tools/releases
+crictl_version=v1.31.1
+#https://github.com/cloudflare/cfssl/releases
+cfssl_version=1.6.5
+#https://github.com/etcd-io/etcd/releases
+etcd_version=v3.5.17
+#https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz
+helm_version=3.16.3
+
+bin_dir=/usr/bin
 cni_type=calico
 base_url=https://mirror.ghproxy.com
-local_ip=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}' | awk 'NR==1{print}')
-#---------------------------------
-if [ "$role" == "node" ];then
-  echo "node"
-else
-  hostnamectl set-hostname master1
-fi
+
+
+
 #-----------------安装基础软件包------------
 if [ -f /etc/debian_version ]; then
   systemctl stop ufw
@@ -117,10 +134,37 @@ else
 fi
 #---------------------------------
 
+
+# 获取具有默认路由的网卡名称
+DEFAULT_INTERFACE=$(ip route show default | awk '/default/ {print $5}')
+# 检查是否成功获取到网卡名称
+if [ -z "$DEFAULT_INTERFACE" ]; then
+  echo "无法获取具有默认路由的网卡名称"
+  exit 1
+fi
+# 获取该网卡的 IP 地址
+IP_ADDRESS=$(ip addr show $DEFAULT_INTERFACE | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+
+# 检查是否成功获取到 IP 地址
+if [ -z "$IP_ADDRESS" ]; then
+  echo "无法获取 IP 地址"
+  exit 1
+fi
+
+# 将 IP 地址中的点替换为破折号
+HOSTNAME="k8s-$(echo $IP_ADDRESS | tr '.' '-')"
+# 设置主机名
+hostnamectl set-hostname "$HOSTNAME"
+# 更新 /etc/hosts 文件以反映新的主机名
+# 假设你的系统使用的是 /etc/hosts 文件来解析主机名
+echo "更新 /etc/hosts 文件..."
+sed -i "s/$(hostname)/$HOSTNAME/g" /etc/hosts
+# 输出新的主机名
+echo "新的主机名已设置为: $HOSTNAME"
+
 #--------安装nfs相关组件----------
 
 mkdir -p ${nfs_path}
-mkdir -p ${bin_dir}
 chmod -R 777 ${nfs_path}
 echo "${nfs_path} *(rw,sync,no_root_squash,no_subtree_check)" | sudo tee -a /etc/exports
 exportfs -ra
@@ -140,23 +184,23 @@ fi
 showmount -e localhost
 
 #-----大陆区下载----------------
-docker_url="https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable/${arch1}/docker-${docker_version}.tgz"
-nerdctl_full_url="https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-$arch.tar.gz"
-kubernetes_server_url="https://storage.googleapis.com/kubernetes-release/release/v${kubernetes_server_version}/kubernetes-server-linux-${arch}.tar.gz"
-skopeo_url="https://github.com/lework/skopeo-binary/releases/download/${skopeo_version}/skopeo-linux-${arch}"
-cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-${arch}.tar.gz"
-hubble_url="https://github.com/cilium/hubble/releases/download/${hubble_version}/hubble-linux-${arch}.tar.gz"
-velero_url="https://github.com/vmware-tanzu/velero/releases/download/${velero_version}/velero-${velero_version}-linux-${arch}.tar.gz"
-etcd_url="https://github.com/etcd-io/etcd/releases/download/${etcd_version}/etcd-${etcd_version}-linux-${arch}.tar.gz"
-cfssl_url="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssl_${cfssl_version}_linux_${arch}"
-cfssljson_url="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssljson_${cfssl_version}_linux_${arch}"
-cfssl_certinfo="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssl-certinfo_${cfssl_version}_linux_${arch}"
-docker_compose_url="https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-${arch1}"
-crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${crictl_version}/crictl-${crictl_version}-linux-$arch.tar.gz"
+docker_url="https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable/${arch}/docker-${docker_version}.tgz"
+nerdctl_full_url="https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-$ARCH.tar.gz"
+kubernetes_server_url="https://storage.googleapis.com/kubernetes-release/release/v${k8s_version}/kubernetes-server-linux-${ARCH}.tar.gz"
+skopeo_url="https://github.com/lework/skopeo-binary/releases/download/${skopeo_version}/skopeo-linux-${ARCH}"
+cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-${ARCH}.tar.gz"
+hubble_url="https://github.com/cilium/hubble/releases/download/${hubble_version}/hubble-linux-${ARCH}.tar.gz"
+velero_url="https://github.com/vmware-tanzu/velero/releases/download/${velero_version}/velero-${velero_version}-linux-${ARCH}.tar.gz"
+etcd_url="https://github.com/etcd-io/etcd/releases/download/${etcd_version}/etcd-${etcd_version}-linux-${ARCH}.tar.gz"
+cfssl_url="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssl_${cfssl_version}_linux_${ARCH}"
+cfssljson_url="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssljson_${cfssl_version}_linux_${ARCH}"
+cfssl_certinfo="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssl-certinfo_${cfssl_version}_linux_${ARCH}"
+docker_compose_url="https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-${arch}"
+crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${crictl_version}/crictl-${crictl_version}-linux-$ARCH.tar.gz"
 
 curl  -k -L -C - -o docker-${docker_version}.tgz ${docker_url}
-#curl -sSfL -o kubernetes-server-linux-${arch}.tar.gz ${kubernetes_server_url}
-curl  -k -L -C - -o kubernetes-server-linux-${arch}.tar.gz https://jefftommy.oss-cn-hangzhou.aliyuncs.com/software/v1.29.2/kubernetes-server-linux-amd64.tar.gz
+curl -sSfL -o kubernetes-server-linux-${ARCH}.tar.gz ${kubernetes_server_url}
+
 packages=(
   $nerdctl_full_url
   $crictl_url
@@ -196,22 +240,22 @@ fi
 
 
 #--------安装containerd相关组件----------
-tar -zxvf cilium-linux-amd64.tar.gz -C /usr/local/bin
-tar -zxvf hubble-linux-amd64.tar.gz -C /usr/local/bin
-/bin/cp skopeo-linux-amd64 /usr/local/bin/skopeo
+tar -zxvf cilium-linux-${ARCH}.tar.gz -C /usr/local/bin
+tar -zxvf hubble-linux-${ARCH}.tar.gz -C /usr/local/bin
+/bin/cp skopeo-linux-${ARCH} /usr/local/bin/skopeo
 chmod +x /usr/local/bin/{cilium,hubble,skopeo}
 
-/bin/cp cfssl_1.6.4_linux_amd64  /usr/local/bin/cfssl
-/bin/cp cfssl-certinfo_1.6.4_linux_amd64  /usr/local/bin/cfssl-certinfo
-/bin/cp cfssljson_1.6.4_linux_amd64  /usr/local/bin/cfssljson
+/bin/cp cfssl_${cfssl_version}_linux_${ARCH}  /usr/local/bin/cfssl
+/bin/cp cfssl-certinfo_${cfssl_version}_linux_${ARCH}  /usr/local/bin/cfssl-certinfo
+/bin/cp cfssljson_${cfssl_version}_linux_${ARCH}  /usr/local/bin/cfssljson
 
 chmod +x /usr/local/bin/{cfssl,cfssl-certinfo,cfssljson}
 
-tar -zxvf etcd-${etcd_version}-linux-amd64.tar.gz -C /usr/local/bin/ --strip-components=1
+tar -zxvf etcd-${etcd_version}-linux-${ARCH}.tar.gz -C /usr/local/bin/ --strip-components=1
 
 chmod +x /usr/local/bin/etcd*
 
-tar zxvf nerdctl-full-${nerdctl_full_version}-linux-amd64.tar.gz -C /usr/local/
+tar zxvf nerdctl-full-${nerdctl_full_version}-linux-${ARCH}.tar.gz -C /usr/local/
 /bin/cp /usr/local/lib/systemd/system/*.service /etc/systemd/system/
 mkdir -p /opt/cni/bin
 /bin/cp /usr/local/libexec/cni/* /opt/cni/bin/
@@ -383,14 +427,10 @@ EOF
 sysctl -p /etc/sysctl.d/95-k8s-sysctl.conf
 
 
-
-sudo mkdir -p "$bin_dir"
-
-
 ##-------安装k8s相关组件----------
-tar -zxvf crictl-${crictl_version}-linux-$arch.tar.gz -C /usr/local/bin/
+tar -zxvf crictl-${crictl_version}-linux-${ARCH}.tar.gz -C /usr/local/bin/
 chmod +x /usr/local/bin/crictl
-tar -zxvf kubernetes-server-linux-${arch}.tar.gz
+tar -zxvf kubernetes-server-linux-${ARCH}}.tar.gz
 /bin/cp kubernetes/server/bin/{kubelet,kubectl,kubeadm} $bin_dir/
 chmod +x $bin_dir/{kubeadm,kubelet,kubectl}
 
@@ -427,9 +467,9 @@ ExecStart=
 ExecStart=/usr/local/bin/kubelet \$KUBELET_KUBECONFIG_ARGS \$KUBELET_CONFIG_ARGS \$KUBELET_KUBEADM_ARGS \$KUBELET_EXTRA_ARGS
 EOF
 
-curl -sSL -o helm-v${helm_version}-linux-amd64.tar.gz "https://mirrors.huaweicloud.com/helm/v${helm_version}/helm-v${helm_version}-linux-${arch}.tar.gz"
-tar -zxvf helm-v${helm_version}-linux-amd64.tar.gz
-cp linux-amd64/helm /usr/local/bin/
+curl -sSL -o helm-v${helm_version}-linux-${ARCH}.tar.gz "https://mirrors.huaweicloud.com/helm/v${helm_version}/helm-v${helm_version}-linux-${ARCH}.tar.gz"
+tar -zxvf helm-v${helm_version}-linux-${ARCH}.tar.gz
+cp linux-${ARCH}/helm /usr/local/bin/
 
 systemctl enable --now kubelet
 echo "source <(kubectl completion bash)" >> ~/.bashrc
@@ -489,7 +529,7 @@ etcd:
       auto-compaction-mode: periodic
 imageRepository: registry.k8s.io
 kind: ClusterConfiguration
-kubernetesVersion: 1.29.2
+kubernetesVersion: ${k8s_version}
 networking:
   dnsDomain: cluster.local
   serviceSubnet: 10.96.0.0/12
