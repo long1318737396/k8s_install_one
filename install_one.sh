@@ -201,10 +201,16 @@ calico_url="https://github.com/projectcalico/calico/releases/download/${calico_v
 docker_buildx_url="https://github.com/docker/buildx/releases/download/${docker_buildx_version}/buildx-${docker_buildx_version}-${ARCH}"
 
 
-
-curl  -k -L -C - -o docker-${docker_version}.tgz ${docker_url}
-curl -sSfL -o kubernetes-server-linux-${ARCH}.tar.gz ${kubernetes_server_url}
-
+if [ -f "docker-${docker_version}.tgz" ];then 
+  echo "docker-${docker_version}.tgz is existed"
+else
+  curl  -k -L -C - -o docker-${docker_version}.tgz ${docker_url}
+fi
+if [ -f "kubernetes-server-linux-${ARCH}.tar.gz" ];then
+  echo "kubernetes-server-linux-${ARCH}.tar.gz is existed"
+else
+  curl -sSfL -o kubernetes-server-linux-${ARCH}.tar.gz ${kubernetes_server_url}
+fi
 packages=(
   $nerdctl_full_url
   $crictl_url
@@ -226,7 +232,8 @@ if [ $zone == "cn" ];then
  
   for package_url in "${packages[@]}"; do
     filename=$(basename "$package_url")
-    if curl  -k -L -C - -o "$filename" ${base_url}/"$package_url"; then
+    if [ ! -f "$filename" ];then
+      curl  -k -L -C - -o "$filename" ${base_url}/"$package_url"
       echo "Downloaded $filename"
     else
       echo "Failed to download $filename"
@@ -235,8 +242,9 @@ if [ $zone == "cn" ];then
   done
 else
   for package_url in "${packages[@]}"; do
-    filename=$(basename "$package_url")
-    if curl  -k -L -C - -o "$filename" "$package_url"; then
+    filename=$(basename "$package_url") 
+    if [ ! -f "$filename" ];then
+      curl  -k -L -C - -o "$filename" "$package_url"
       echo "Downloaded $filename"
     else
       echo "Failed to download $filename"
@@ -247,15 +255,28 @@ fi
 
 
 #--------安装containerd相关组件----------
-tar -zxvf cilium-linux-${ARCH}.tar.gz -C ${bin_dir}
-tar -zxvf hubble-linux-${ARCH}.tar.gz -C ${bin_dir}
-tar -zxvf ecapture-${ecapture_version}-linux-${ARCH}.tar.gz
-/bin/cp ecapture-${ecapture_version}-linux-${ARCH} ${bin_dir}/ecapture  
-tar -zxvf ptcpdump-${pcpdump_version}-linux-${ARCH}.tar.gz
-/bin/cp ptcpdump ${bin_dir}/ptcpdump
-tar -zxvf calicoctl-linux-${ARCH}.tar.gz
-/bin/cp calicoctl-linux-${ARCH} ${bin_dir}/calicoctl
-/bin/cp skopeo-linux-${ARCH} ${bin_dir}/skopeo
+if [ -f "cilium-linux-${ARCH}.tar.gz" ];then
+  tar -zxvf cilium-linux-${ARCH}.tar.gz -C ${bin_dir}
+fi
+if [ -f "hubble-linux-${ARCH}.tar.gz" ];then
+  tar -zxvf hubble-linux-${ARCH}.tar.gz -C ${bin_dir}
+fi
+if [ -f "ecapture-${ecapture_version}-linux-${ARCH}.tar.gz" ];then
+  tar -zxvf ecapture-${ecapture_version}-linux-${ARCH}.tar.gz
+  /bin/cp ecapture-${ecapture_version}-linux-${ARCH} ${bin_dir}/ecapture  
+fi
+if [ -f "ptcpdump-${pcpdump_version}-linux-${ARCH}.tar.gz" ];then
+  tar -zxvf ptcpdump-${pcpdump_version}-linux-${ARCH}.tar.gz
+  /bin/cp ptcpdump ${bin_dir}/ptcpdump
+fi
+if [ -f "calicoctl-linux-${ARCH}.tar.gz" ];then
+  tar -zxvf calicoctl-linux-${ARCH}.tar.gz
+  /bin/cp calicoctl-linux-${ARCH} ${bin_dir}/calicoctl
+fi
+if [ -f "skopeo-linux-${ARCH}.tar.gz" ];then
+  tar -zxvf skopeo-linux-${ARCH}.tar.gz
+  /bin/cp skopeo-linux-${ARCH} ${bin_dir}/skopeo
+fi
 chmod +x ${bin_dir}/{cilium,hubble,skopeo,ecapture,ptcpdump,calicoctl}
 
 /bin/cp cfssl_${cfssl_version}_linux_${ARCH}  ${bin_dir}/cfssl
