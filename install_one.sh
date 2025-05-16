@@ -184,7 +184,7 @@ showmount -e localhost
 #-----大陆区下载----------------
 docker_url="https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable/${arch}/docker-${docker_version}.tgz"
 nerdctl_full_url="https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-$ARCH.tar.gz"
-kubernetes_server_url="https://storage.googleapis.com/kubernetes-release/release/v${k8s_version}/kubernetes-server-linux-${ARCH}.tar.gz"
+kubernetes_server_url="https://dl.k8s.io/release/${k8s_version}/kubernetes-server-linux-${ARCH}.tar.gz"
 skopeo_url="https://github.com/lework/skopeo-binary/releases/download/${skopeo_version}/skopeo-linux-${ARCH}"
 cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-${ARCH}.tar.gz"
 hubble_url="https://github.com/cilium/hubble/releases/download/${hubble_version}/hubble-linux-${ARCH}.tar.gz"
@@ -236,8 +236,7 @@ if [ $zone == "cn" ];then
       curl  -k -L -C - -o "$filename" ${base_url}/"$package_url"
       echo "Downloaded $filename"
     else
-      echo "Failed to download $filename"
-      exit 1
+      echo "$filename is existed"
     fi
   done
 else
@@ -247,8 +246,7 @@ else
       curl  -k -L -C - -o "$filename" "$package_url"
       echo "Downloaded $filename"
     else
-      echo "Failed to download $filename"
-      exit 1
+      echo "$filename is existed"
     fi
   done
 fi
