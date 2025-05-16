@@ -871,12 +871,15 @@ else
     else
       kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
     fi
-  else 
+  elif [ "$cni_type" == "calico" ];then
     if [ "$zone" == "cn" ];then
       kubectl apply -f ${base_url}/https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/tigera-operator.yaml
     else
       kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/tigera-operator.yaml
     fi
+  else 
+    echo "cni_type is not valid"
+    exit 1
   fi
 
 
