@@ -289,7 +289,7 @@ chmod +x ${bin_dir}/etcd*
 
 mkdir -p /usr/local/bin
 tar -zxvf nerdctl-full-${nerdctl_full_version}-linux-${ARCH}.tar.gz -C /usr/local/
-/bin/cp /usr/local/bin/lib/systemd/system/*.service /etc/systemd/system/
+/bin/cp /usr/local/lib/systemd/system/*.service /etc/systemd/system/
 mkdir -p /opt/cni/bin
 /bin/cp /usr/local/bin/libexec/cni/* /opt/cni/bin/
 #sed -i "s@/usr/local/bin@${bin_dir}@g" /etc/systemd/system/buildkit.service
