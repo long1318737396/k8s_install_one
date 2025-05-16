@@ -3,7 +3,7 @@
 
 ```bash
 export zone=cn
-export k8s_version=v1.32.3
+export k8s_version=v1.33.0
 export cni_type=calico
 curl -sSL https://gitee.com/long1318737396/k8s_install_one/raw/main/install_one.sh |bash
 curl -sSL https://raw.githubusercontent.com/long1318737396/k8s_install_one/main/install_one.sh | bash

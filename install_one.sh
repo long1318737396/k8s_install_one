@@ -17,36 +17,48 @@ docker_data_root=/data/kubernetes/docker
 etcd_data=/data/kubernetes/etcd
 containerd_data="/data/kubernetes/containerd"
 #https://github.com/containerd/nerdctl/releases
-nerdctl_full_version=2.0.0
+nerdctl_full_version=2.1.1
 #https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable/x86_64/
-docker_version=27.3.1
+docker_version=28.1.1
 #https://github.com/kubernetes/kubernetes/releases
-#k8s_version=v1.29.2
+k8s_version=v1.33.0
 #kubernetes_server_version=1.29.2
 #https://github.com/lework/skopeo-binary/releases
-skopeo_version=v1.17.0
+skopeo_version=v1.18.0
 #https://github.com/cilium/hubble/releases
-hubble_version=v1.16.4
+hubble_version=v1.17.3
 #https://github.com/vmware-tanzu/velero/releases
-velero_version=v1.15.0
+velero_version=v1.16.1
 #https://github.com/cilium/cilium/releases
-cilium_version=v1.16.4
+cilium_version=v1.17.4
 #https://github.com/cilium/cilium-cli/releases
-cilium-cli_version=v0.16.20
+cilium_cli_version=v0.18.3
 #https://github.com/docker/compose/releases
-docker_compose_version=v2.31.0
+docker_compose_version=v2.36.0
 #https://github.com/kubernetes-sigs/cri-tools/releases
-crictl_version=v1.31.1
+crictl_version=v1.33.0
 #https://github.com/cloudflare/cfssl/releases
 cfssl_version=1.6.5
 #https://github.com/etcd-io/etcd/releases
-etcd_version=v3.5.17
+etcd_version=v3.6.0
 #https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz
-helm_version=3.16.3
+#https://github.com/helm/helm/releases
+helm_version=3.17.3
+#https://github.com/gojue/ecapture/releases
+ecapture_version=v1.0.2
+#https://github.com/mozillazg/ptcpdump/releases
+pcpdump_version=0.33.2
+#https://github.com/projectcalico/calico/releases
+calico_version=v3.30.0
+#https://github.com/kubernetes-sigs/gateway-api/releases/
+gateway_api_version=v1.3.0
+#https://github.com/docker/buildx/releases
+docker_buildx_version="v0.23.0"
+
 
 bin_dir=/usr/bin
 cni_type=calico
-base_url=https://mirror.ghproxy.com
+base_url=https://ghfast.top
 
 
 
@@ -76,6 +88,9 @@ if [ -f /etc/debian_version ]; then
     curl
     git
     lsof
+    iputils-ping
+    iproute2
+    net-tools
   )
   for i in ${packages[@]};do
       apt install $i   -y
@@ -101,36 +116,15 @@ elif [ -f /etc/redhat-release ]; then
     nftables
     iproute-tc
     lsof
+    git 
   )
 
   for i in ${packages[@]};do
       yum install $i  --skip-broken -y
   done
-else 
-    systemctl stop firewalld
-    systemctl disable firewalld
-    packages=(
-    wget
-    vim
-    conntrack
-    socat
-    ipvsadm
-    ipset
-    telnet
-    bind-utils
-    nfs-utils
-    unzip
-    bash-completion
-    tcpdump
-    mtr
-    nftables
-    iproute-tc
-    lsof
-  )
-
-  for i in ${packages[@]};do
-      yum install $i  --skip-broken -y
-  done
+else
+  echo "this os is not support"
+  exit 1
 fi
 #---------------------------------
 
@@ -151,14 +145,19 @@ if [ -z "$IP_ADDRESS" ]; then
   exit 1
 fi
 
+# 获取旧主机名
+OLD_HOSTNAME=$(hostname)
 # 将 IP 地址中的点替换为破折号
 HOSTNAME="k8s-$(echo $IP_ADDRESS | tr '.' '-')"
 # 设置主机名
 hostnamectl set-hostname "$HOSTNAME"
-# 更新 /etc/hosts 文件以反映新的主机名
-# 假设你的系统使用的是 /etc/hosts 文件来解析主机名
+# 更新 /etc/hosts 文件
 echo "更新 /etc/hosts 文件..."
-sed -i "s/$(hostname)/$HOSTNAME/g" /etc/hosts
+# 备份hosts文件
+cp /etc/hosts /etc/hosts.bak
+# 更新 hosts 文件，保留原有内容
+sed -i "s/\b${OLD_HOSTNAME}\b/${HOSTNAME}/g" /etc/hosts
+
 # 输出新的主机名
 echo "新的主机名已设置为: $HOSTNAME"
 
@@ -177,9 +176,8 @@ elif [ -f /etc/redhat-release ]; then
   systemctl enable nfs-server
   systemctl start nfs-server
 else
-  systemctl enable rpcbind --now
-  systemctl enable nfs-server
-  systemctl start nfs-server
+  echo "this os is not support"
+  exit 1
 fi
 showmount -e localhost
 
@@ -197,6 +195,12 @@ cfssljson_url="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_ve
 cfssl_certinfo="https://github.com/cloudflare/cfssl/releases/download/v${cfssl_version}/cfssl-certinfo_${cfssl_version}_linux_${ARCH}"
 docker_compose_url="https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-linux-${arch}"
 crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${crictl_version}/crictl-${crictl_version}-linux-$ARCH.tar.gz"
+ecapture_url="https://github.com/gojue/ecapture/releases/download/${ecapture_version}/ecapture-${ecapture_version}-linux-${ARCH}.tar.gz"
+pcpdump_url="https://github.com/mozillazg/ptcpdump/releases/download/v${pcpdump_version}/ptcpdump_${ptcpdump_version}_linux_${ARCH}.tar.gz"
+calico_url="https://github.com/projectcalico/calico/releases/download/${calico_version}/calicoctl-linux-${ARCH}"
+docker_buildx_url="https://github.com/docker/buildx/releases/download/${docker_buildx_version}/buildx-${docker_buildx_version}-${ARCH}"
+
+
 
 curl  -k -L -C - -o docker-${docker_version}.tgz ${docker_url}
 curl -sSfL -o kubernetes-server-linux-${ARCH}.tar.gz ${kubernetes_server_url}
@@ -213,6 +217,9 @@ packages=(
   $hubble_url
   $velero_url
   $skopeo_url
+  $ecapture_url
+  $pcpdump_url
+  $calico_url
 )
 
 if [ $zone == "cn" ];then
@@ -240,25 +247,31 @@ fi
 
 
 #--------安装containerd相关组件----------
-tar -zxvf cilium-linux-${ARCH}.tar.gz -C /usr/local/bin
-tar -zxvf hubble-linux-${ARCH}.tar.gz -C /usr/local/bin
-/bin/cp skopeo-linux-${ARCH} /usr/local/bin/skopeo
-chmod +x /usr/local/bin/{cilium,hubble,skopeo}
+tar -zxvf cilium-linux-${ARCH}.tar.gz -C ${bin_dir}
+tar -zxvf hubble-linux-${ARCH}.tar.gz -C ${bin_dir}
+tar -zxvf ecapture-${ecapture_version}-linux-${ARCH}.tar.gz
+/bin/cp ecapture-${ecapture_version}-linux-${ARCH} ${bin_dir}/ecapture  
+tar -zxvf ptcpdump-${pcpdump_version}-linux-${ARCH}.tar.gz
+/bin/cp ptcpdump ${bin_dir}/ptcpdump
+tar -zxvf calicoctl-linux-${ARCH}.tar.gz
+/bin/cp calicoctl-linux-${ARCH} ${bin_dir}/calicoctl
+/bin/cp skopeo-linux-${ARCH} ${bin_dir}/skopeo
+chmod +x ${bin_dir}/{cilium,hubble,skopeo,ecapture,ptcpdump,calicoctl}
 
-/bin/cp cfssl_${cfssl_version}_linux_${ARCH}  /usr/local/bin/cfssl
-/bin/cp cfssl-certinfo_${cfssl_version}_linux_${ARCH}  /usr/local/bin/cfssl-certinfo
-/bin/cp cfssljson_${cfssl_version}_linux_${ARCH}  /usr/local/bin/cfssljson
+/bin/cp cfssl_${cfssl_version}_linux_${ARCH}  ${bin_dir}/cfssl
+/bin/cp cfssl-certinfo_${cfssl_version}_linux_${ARCH}  ${bin_dir}/cfssl-certinfo
+/bin/cp cfssljson_${cfssl_version}_linux_${ARCH}  ${bin_dir}/cfssljson
 
-chmod +x /usr/local/bin/{cfssl,cfssl-certinfo,cfssljson}
+chmod +x ${bin_dir}/{cfssl,cfssl-certinfo,cfssljson}
 
-tar -zxvf etcd-${etcd_version}-linux-${ARCH}.tar.gz -C /usr/local/bin/ --strip-components=1
+tar -zxvf etcd-${etcd_version}-linux-${ARCH}.tar.gz -C ${bin_dir} --strip-components=1
 
-chmod +x /usr/local/bin/etcd*
+chmod +x ${bin_dir}/etcd*
 
-tar zxvf nerdctl-full-${nerdctl_full_version}-linux-${ARCH}.tar.gz -C /usr/local/
-/bin/cp /usr/local/lib/systemd/system/*.service /etc/systemd/system/
+tar zxvf nerdctl-full-${nerdctl_full_version}-linux-${ARCH}.tar.gz -C ${bin_dir}
+/bin/cp ${bin_dir}/lib/systemd/system/*.service /etc/systemd/system/
 mkdir -p /opt/cni/bin
-/bin/cp /usr/local/libexec/cni/* /opt/cni/bin/
+/bin/cp ${bin_dir}/libexec/cni/* /opt/cni/bin/
 
 systemctl enable buildkit containerd 
 systemctl start buildkit containerd 
@@ -285,20 +298,160 @@ EOF
 mkdir -p /etc/containerd/
 containerd config default > /etc/containerd/config.toml
 sed -i 's/SystemdCgroup\ =\ false/SystemdCgroup\ =\ true/g' /etc/containerd/config.toml
-sed -i  's|sandbox_image = "registry.k8s.io/pause:3.8"|sandbox_image = "registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.9"|g' /etc/containerd/config.toml
+sed -i  's|sandbox_image = "registry.k8s.io/pause:3.10"|sandbox_image = "registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.10"|g' /etc/containerd/config.toml
 sed -i "s#/var/lib/containerd#$containerd_data#g" /etc/containerd/config.toml
+
+
+
+# docker hub镜像加速
+mkdir -p /etc/containerd/certs.d/docker.io
+cat > /etc/containerd/certs.d/docker.io/hosts.toml << EOF
+server = "https://docker.io"
+[host."https://docker.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+
+[host."https://reg-mirror.qiniu.com"]
+  capabilities = ["pull", "resolve", "push"]
+
+[host."https://dockerhub.icu"]
+  capabilities = ["pull", "resolve", "push"]
+  
+EOF
+
+# registry.k8s.io镜像加速
+mkdir -p /etc/containerd/certs.d/registry.k8s.io
+tee /etc/containerd/certs.d/registry.k8s.io/hosts.toml << 'EOF'
+server = "https://registry.k8s.io"
+
+[host."https://k8s.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+# docker.elastic.co镜像加速
+mkdir -p /etc/containerd/certs.d/docker.elastic.co
+tee /etc/containerd/certs.d/docker.elastic.co/hosts.toml << 'EOF'
+server = "https://docker.elastic.co"
+
+[host."https://elastic.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+# gcr.io镜像加速
+mkdir -p /etc/containerd/certs.d/gcr.io
+tee /etc/containerd/certs.d/gcr.io/hosts.toml << 'EOF'
+server = "https://gcr.io"
+
+[host."https://gcr.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+# ghcr.io镜像加速
+mkdir -p /etc/containerd/certs.d/ghcr.io
+tee /etc/containerd/certs.d/ghcr.io/hosts.toml << 'EOF'
+server = "https://ghcr.io"
+
+[host."https://ghcr.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+# k8s.gcr.io镜像加速
+mkdir -p /etc/containerd/certs.d/k8s.gcr.io
+tee /etc/containerd/certs.d/k8s.gcr.io/hosts.toml << 'EOF'
+server = "https://k8s.gcr.io"
+
+[host."https://k8s-gcr.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+# mcr.m.daocloud.io镜像加速
+mkdir -p /etc/containerd/certs.d/mcr.microsoft.com
+tee /etc/containerd/certs.d/mcr.microsoft.com/hosts.toml << 'EOF'
+server = "https://mcr.microsoft.com"
+
+[host."https://mcr.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+# nvcr.io镜像加速
+mkdir -p /etc/containerd/certs.d/nvcr.io
+tee /etc/containerd/certs.d/nvcr.io/hosts.toml << 'EOF'
+server = "https://nvcr.io"
+
+[host."https://nvcr.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+# quay.io镜像加速
+mkdir -p /etc/containerd/certs.d/quay.io
+tee /etc/containerd/certs.d/quay.io/hosts.toml << 'EOF'
+server = "https://quay.io"
+
+[host."https://quay.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+# registry.jujucharms.com镜像加速
+mkdir -p /etc/containerd/certs.d/registry.jujucharms.com
+tee /etc/containerd/certs.d/registry.jujucharms.com/hosts.toml << 'EOF'
+server = "https://registry.jujucharms.com"
+
+[host."https://jujucharms.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+# rocks.canonical.com镜像加速
+mkdir -p /etc/containerd/certs.d/rocks.canonical.com
+tee /etc/containerd/certs.d/rocks.canonical.com/hosts.toml << 'EOF'
+server = "https://rocks.canonical.com"
+
+[host."https://rocks-canonical.m.daocloud.io"]
+  capabilities = ["pull", "resolve", "push"]
+EOF
+
+#自定义仓库
+mkdir -p /etc/containerd/certs.d/registry.cn-hangzhou.aliyuncs.com
+tee /etc/containerd/certs.d/registry.cn-hangzhou.aliyuncs.com/hosts.toml << 'EOF'
+server = "https://registry.cn-hangzhou.aliyuncs.com"
+
+[host."https://registry.cn-hangzhou.aliyuncs.com"]
+  capabilities = ["pull", "resolve", "push"]
+  skip_verify = true
+EOF
+
+mkdir -p /etc/containerd/certs.d/registry.fangcloud.net:30500
+tee /etc/containerd/certs.d/registry.fangcloud.net:30500/hosts.toml << 'EOF'
+server = "https://registry.fangcloud.net:30500"
+
+[host."https://registry.fangcloud.net:30500"]
+  capabilities = ["pull", "resolve", "push"]
+  skip_verify = true
+EOF
+
+
+
+mkdir -p /etc/containerd/certs.d/internal-registry.fangcloud.net
+tee /etc/containerd/certs.d/internal-registry.fangcloud.net/hosts.toml << 'EOF'
+server = "https://internal-registry.fangcloud.net"
+
+[host."https://internal-registry.fangcloud.net"]
+  capabilities = ["pull", "resolve", "push"]
+  skip_verify = true
+EOF
+
+
+
 systemctl restart containerd 
 if [ $? -ne 0 ];then
   echo "containerd service restart failed"
   exit 1
 fi
 
-/bin/cp docker-compose-linux-x86_64 /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
+/bin/cp docker-compose-linux-x86_64 ${bin_dir}/docker-compose
+chmod +x ${bin_dir}/docker-compose
 
 #-------安装docker相关组件----------
 tar -zxvf docker-${docker_version}.tgz 
-/bin/cp docker/docker* /usr/local/bin/
+/bin/cp docker/docker* ${bin_dir}/
 
 sudo cat > /usr/lib/systemd/system/docker.service << EOF
 [Unit]
@@ -308,7 +461,7 @@ After=network-online.target firewalld.service
 Wants=network-online.target
 [Service]
 Type=notify
-ExecStart=/usr/local/bin/dockerd
+ExecStart=${bin_dir}/dockerd
 ExecReload=/bin/kill -s HUP \$MAINPID
 LimitNOFILE=infinity
 LimitNPROC=infinity
@@ -335,7 +488,7 @@ tee /etc/docker/daemon.json <<-'EOF'
         "max-file": "10"
     },
     "bip": "169.254.123.1/24",
-    "registry-mirrors": ["https://xbrfpgqk.mirror.aliyuncs.com"],
+    "registry-mirrors": ["https://xbrfpgqk.mirror.aliyuncs.com","https://docker.gh-proxy.com"],
     "live-restore": true
 }
 EOF
@@ -345,6 +498,18 @@ if [ $? -ne 0 ];then
   echo "docker service start failed"
   exit 1
 fi
+
+if [ ! -f /usr/lib/docker/cli-plugins/docker-buildx ];then
+   if [ "$zone" == "cn" ];then
+     curl -fSL ${base_url}/${docker_buildx_url} -o /usr/lib/docker/cli-plugins/docker-buildx
+   else
+     curl -fSL ${docker_buildx_url} -o /usr/lib/docker/cli-plugins/docker-buildx
+   fi
+   chmod +x /usr/lib/docker/cli-plugins/docker-buildx
+else
+  echo "/usr/lib/docker/cli-plugins/docker-buildx is existed"
+fi
+
 docker completion bash > /etc/profile.d/docker.sh
 #source /etc/profile.d/docker.sh 
 
@@ -428,8 +593,8 @@ sysctl -p /etc/sysctl.d/95-k8s-sysctl.conf
 
 
 ##-------安装k8s相关组件----------
-tar -zxvf crictl-${crictl_version}-linux-${ARCH}.tar.gz -C /usr/local/bin/
-chmod +x /usr/local/bin/crictl
+tar -zxvf crictl-${crictl_version}-linux-${ARCH}.tar.gz -C ${bin_dir}
+chmod +x ${bin_dir}/crictl
 tar -zxvf kubernetes-server-linux-${ARCH}}.tar.gz
 /bin/cp kubernetes/server/bin/{kubelet,kubectl,kubeadm} $bin_dir/
 chmod +x $bin_dir/{kubeadm,kubelet,kubectl}
@@ -442,7 +607,7 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/kubelet
+ExecStart=${bin_dir}/kubelet
 Restart=always
 StartLimitInterval=0
 RestartSec=10
@@ -469,7 +634,7 @@ EOF
 
 curl -sSL -o helm-v${helm_version}-linux-${ARCH}.tar.gz "https://mirrors.huaweicloud.com/helm/v${helm_version}/helm-v${helm_version}-linux-${ARCH}.tar.gz"
 tar -zxvf helm-v${helm_version}-linux-${ARCH}.tar.gz
-cp linux-${ARCH}/helm /usr/local/bin/
+cp linux-${ARCH}/helm ${bin_dir}/
 
 systemctl enable --now kubelet
 echo "source <(kubectl completion bash)" >> ~/.bashrc
@@ -481,7 +646,7 @@ kubeadm config print join-defaults > kubeadm-join.yaml
 
 
 tee kubeadm-${k8s_version}-init.yaml <<EOF
-apiVersion: kubeadm.k8s.io/v1beta3
+apiVersion: kubeadm.k8s.io/v1beta4
 bootstrapTokens:
 - groups:
   - system:bootstrappers:kubeadm:default-node-token
@@ -559,6 +724,20 @@ clusterDNS:
 cgroupDriver: systemd
 containerRuntimeEndpoint: unix:///var/run/containerd/containerd.sock
 imageServiceEndpoint: unix:///var/run/containerd/containerd.sock
+cpuManagerPolicy: none
+evictionHard:
+  imagefs.available: 15%
+  memory.available: 300Mi
+  nodefs.available: 10%
+  nodefs.inodesFree: 5%
+systemReserved:
+    cpu: 100m
+    memory: 100Mi
+    pid: "1000"
+kubeReserved:
+    cpu: 100m
+    memory: 100Mi
+    pid: "1000"
 EOF
 
 
@@ -609,11 +788,15 @@ else
   echo "this is master"
   
   kubectl taint node master node-role.kubernetes.io/control-plane:NoSchedule-
-  kubectl apply -f https://mirror.ghproxy.com/https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+  if [ "$zone" == "cn" ];then
+    kubectl apply -f ${base_url}/https://github.com/kubernetes-sigs/gateway-api/releases/download/${gateway_api_version}/experimental-install.yaml
+  else
+    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/${gateway_api_version}/experimental-install.yaml
+  fi
   helm repo add cilium https://helm.cilium.io/
   helm repo update
   if [ "$cni_type" == "cilium" ];then
-    helm upgrade --install cilium cilium/cilium --namespace=kube-system  --version 1.15.1 \
+    helm upgrade --install cilium cilium/cilium --namespace=kube-system  --version 1.17.3 \
       --set routingMode=native \
       --set kubeProxyReplacement=strict \
       --set bandwidthManager.enabled=true \
@@ -644,9 +827,16 @@ else
       --set l2announcements.enabled=true \
       --set loadBalancer.mode=dsr
   elif [ "$cni_type" == "flannel" ];then
-    kubectl apply -f kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+    if [ "$zone" == "cn" ];then
+      kubectl apply -f ${base_url}/https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+    else
+      kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+    fi
   elif [ "$cni_type" == "calico" ];then
-    kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
+    if [ "$zone" == "cn" ];then
+      kubectl apply -f ${base_url}/https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/tigera-operator.yaml
+    else
+      kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/tigera-operator.yaml
   fi
   if [ $? -ne 0 ];then
     echo "failed"
@@ -673,7 +863,11 @@ else
   
   curl -fsSL https://addons.kuboard.cn/kuboard/kuboard-static-pod.sh -o kuboard.sh
   bash kuboard.sh
-  kubectl apply -f https://mirror.ghproxy.com/https://raw.githubusercontent.com/metallb/metallb/v0.14.3/config/manifests/metallb-frr-k8s.yaml
+  if [ "$zone" == "cn" ];then
+    kubectl apply -f ${base_url}/https://raw.githubusercontent.com/metallb/metallb/v0.14.3/config/manifests/metallb-frr-k8s.yaml
+  else
+    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.3/config/manifests/metallb-frr-k8s.yaml
+  fi
 
 
 
@@ -688,7 +882,7 @@ else
 ##----对k8s镜像进行替换---------
   if [ "$zone" == "cn" ];then
     kubectl set image  -n environment deployment nfs-subdir-external-provisioner nfs-subdir-external-provisioner=k8s.dockerproxy.com/sig-storage/nfs-subdir-external-provisioner:v4.0.2
-    curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml | sed 's|registry.k8s.io|k8s.dockerproxy.com|g' | kubectl apply -f -
+    curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml | sed 's|registry.k8s.io|docker.gh-proxy.com|g' | kubectl apply -f -
   else 
     curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml  | kubectl apply -f -
   fi

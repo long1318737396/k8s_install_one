@@ -2,7 +2,7 @@ nfs_path=/data/k8s/nfs
 docker_data_root=/data/kubernetes/docker
 etcd_data=/data/kubernetes/etcd
 containerd_data="/data/kubernetes/containerd"
-bin_dir=/usr/local/bin
+bin_dir=/usr/bin
 
 
 
@@ -28,17 +28,17 @@ ip link delete docker0
 
 rm -rf /etc/buildkit/buildkitd.toml
 rm -rf /etc/nerdctl/nerdctl.toml
-rm -rf /usr/local/bin/docker-compose
+rm -rf ${bin_dir}/docker-compose
 
 rm -rf /etc/systemd/system/{buildkit.service,containerd.service,stargz-snapshotter.service}
 rm -rf /opt/cni/bin/
 rm -rf /etc/containerd/
 rm -rf /etc/docker
 
-rm -rf /usr/local/bin/docker*
-rm -rf /usr/local/bin/kube*
-rm -rf /usr/local/bin/crictl
-rm -rf /usr/local/bin/etcd*
+rm -rf ${bin_dir}/docker*
+rm -rf ${bin_dir}/kube*
+rm -rf ${bin_dir}/crictl
+rm -rf ${bin_dir}/etcd*
 #rm -rf ${nfs_path}
 rm -rf ${docker_data_root}
 rm -rf ${etcd_data}
@@ -73,5 +73,5 @@ package=(
 )
 for i in ${package[@]}
   do
-     rm -rf /usr/local/$i
+     rm -rf ${bin_dir}/$i
 done
