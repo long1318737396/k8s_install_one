@@ -689,8 +689,8 @@ nodeRegistration:
   imagePullPolicy: IfNotPresent
   name: master
   taints: null
-skipPhases:
-  - addon/nginx-proxy
+#skipPhases:
+#  - addon/kube-proxy
 timeouts:
   controlPlaneComponentHealthCheck: 4m0s
   discovery: 5m0s
@@ -763,7 +763,7 @@ clusterDNS:
 cgroupDriver: systemd
 containerRuntimeEndpoint: unix:///var/run/containerd/containerd.sock
 imageServiceEndpoint: unix:///var/run/containerd/containerd.sock
-cpuManagerPolicy: None
+cpuManagerPolicy: none
 evictionHard:
   imagefs.available: 15%
   memory.available: 300Mi
