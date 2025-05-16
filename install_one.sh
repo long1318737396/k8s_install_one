@@ -756,7 +756,6 @@ kind: KubeletConfiguration
 serializeImagePulls: false
 containerLogMaxSize: 100Mi
 containerLogMaxFiles: 10
-cpuManagerPolicy: none
 maxPods: 128
 podPidsLimit: 16384
 clusterDNS:
