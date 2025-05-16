@@ -198,7 +198,7 @@ crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/${cri
 ecapture_url="https://github.com/gojue/ecapture/releases/download/${ecapture_version}/ecapture-${ecapture_version}-linux-${ARCH}.tar.gz"
 pcpdump_url="https://github.com/mozillazg/ptcpdump/releases/download/v${pcpdump_version}/ptcpdump_${ptcpdump_version}_linux_${ARCH}.tar.gz"
 calico_url="https://github.com/projectcalico/calico/releases/download/${calico_version}/calicoctl-linux-${ARCH}"
-docker_buildx_url="https://github.com/docker/buildx/releases/download/${docker_buildx_version}/buildx-${docker_buildx_version}-${ARCH}"
+docker_buildx_url="https://github.com/docker/buildx/releases/download/${docker_buildx_version}/buildx-${docker_buildx_version}.linux-${ARCH}"
 
 
 if [ -f "docker-${docker_version}.tgz" ];then 
@@ -291,7 +291,7 @@ mkdir -p /usr/local/bin
 tar -zxvf nerdctl-full-${nerdctl_full_version}-linux-${ARCH}.tar.gz -C /usr/local/
 /bin/cp /usr/local/lib/systemd/system/*.service /etc/systemd/system/
 mkdir -p /opt/cni/bin
-/bin/cp /usr/local/bin/libexec/cni/* /opt/cni/bin/
+/bin/cp /usr/local/libexec/cni/* /opt/cni/bin/
 #sed -i "s@/usr/local/bin@${bin_dir}@g" /etc/systemd/system/buildkit.service
 #sed -i "s@/usr/local/bin@${bin_dir}@g" /etc/systemd/system/containerd.service
 
@@ -618,7 +618,7 @@ sysctl -p /etc/sysctl.d/95-k8s-sysctl.conf
 ##-------安装k8s相关组件----------
 tar -zxvf crictl-${crictl_version}-linux-${ARCH}.tar.gz -C ${bin_dir}
 chmod +x ${bin_dir}/crictl
-tar -zxvf kubernetes-server-linux-${ARCH}}.tar.gz
+tar -zxvf kubernetes-server-linux-${ARCH}.tar.gz
 /bin/cp kubernetes/server/bin/{kubelet,kubectl,kubeadm} $bin_dir/
 chmod +x $bin_dir/{kubeadm,kubelet,kubectl}
 
