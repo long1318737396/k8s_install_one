@@ -876,10 +876,7 @@ else
       kubectl apply -f ${base_url}/https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/tigera-operator.yaml
     else
       kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/tigera-operator.yaml
-  fi
-  if [ $? -ne 0 ];then
-    echo "failed"
-    exit 1
+    fi
   fi
 
 
