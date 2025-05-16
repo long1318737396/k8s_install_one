@@ -687,7 +687,7 @@ localAPIEndpoint:
 nodeRegistration:
   criSocket: unix:///var/run/containerd/containerd.sock
   imagePullPolicy: IfNotPresent
-  name: master
+  name: ${HOSTNAME}
   taints: null
 #skipPhases:
 #  - addon/kube-proxy
@@ -826,7 +826,7 @@ if [ "$role" == "node" ];then
 else
   echo "this is master"
   
-  kubectl taint node master node-role.kubernetes.io/control-plane:NoSchedule-
+  kubectl taint node ${HOSTNAME} node-role.kubernetes.io/control-plane:NoSchedule-
   if [ "$zone" == "cn" ];then
     kubectl apply -f ${base_url}/https://github.com/kubernetes-sigs/gateway-api/releases/download/${gateway_api_version}/experimental-install.yaml
   else
@@ -871,7 +871,7 @@ else
     else
       kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
     fi
-  elif [ "$cni_type" == "calico" ];then
+  else 
     if [ "$zone" == "cn" ];then
       kubectl apply -f ${base_url}/https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/tigera-operator.yaml
     else
