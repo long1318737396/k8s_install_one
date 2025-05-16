@@ -702,7 +702,8 @@ certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controllerManager:
   extraArgs:
-    node-cidr-mask-size-ipv4: "24"
+    - name: node-cidr-mask-size-ipv4
+      value: "24"
   certSANs:
     - vip.cluster.local
     - 127.0.0.1
@@ -716,8 +717,10 @@ etcd:
   local:
     dataDir: ${etcd_data}
     extraArgs:
-      quota-backend-bytes: "32768000000"
-      auto-compaction-mode: periodic
+      - name: quota-backend-bytes
+        value: "32768000000"
+      - name: auto-compaction-mode
+        value: periodic
 imageRepository: registry.k8s.io
 kind: ClusterConfiguration
 kubernetesVersion: ${k8s_version}
