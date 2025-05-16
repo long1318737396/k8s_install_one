@@ -272,6 +272,8 @@ tar zxvf nerdctl-full-${nerdctl_full_version}-linux-${ARCH}.tar.gz -C ${bin_dir}
 /bin/cp ${bin_dir}/lib/systemd/system/*.service /etc/systemd/system/
 mkdir -p /opt/cni/bin
 /bin/cp ${bin_dir}/libexec/cni/* /opt/cni/bin/
+sed -i "s@/usr/local/bin@${bin_dir}@g" /etc/systemd/system/buildkit.service
+sed -i "s@/usr/local/bin@${bin_dir}@g" /etc/systemd/system/containerd.service
 
 systemctl enable buildkit containerd 
 systemctl start buildkit containerd 
