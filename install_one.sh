@@ -653,7 +653,7 @@ EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env
 # the .NodeRegistration.KubeletExtraArgs object in the configuration files instead. KUBELET_EXTRA_ARGS should be sourced from this file.
 EnvironmentFile=-/etc/default/kubelet
 ExecStart=
-ExecStart=/usr/local/bin/kubelet \$KUBELET_KUBECONFIG_ARGS \$KUBELET_CONFIG_ARGS \$KUBELET_KUBEADM_ARGS \$KUBELET_EXTRA_ARGS
+ExecStart=${bin_dir}/kubelet \$KUBELET_KUBECONFIG_ARGS \$KUBELET_CONFIG_ARGS \$KUBELET_KUBEADM_ARGS \$KUBELET_EXTRA_ARGS
 EOF
 
 curl -sSL -o helm-v${helm_version}-linux-${ARCH}.tar.gz "https://mirrors.huaweicloud.com/helm/v${helm_version}/helm-v${helm_version}-linux-${ARCH}.tar.gz"
@@ -689,9 +689,14 @@ nodeRegistration:
   imagePullPolicy: IfNotPresent
   name: master
   taints: null
+skipPhases:
+  - addon/nginx-proxy
 ---
 apiServer:
   timeoutForControlPlane: 4m0s
+  certSANs:
+    - vip.cluster.local
+    - 127.0.0.1
   extraArgs:
     - name: default-not-ready-toleration-seconds
       value: "300"
@@ -704,9 +709,6 @@ controllerManager:
   extraArgs:
     - name: node-cidr-mask-size-ipv4
       value: "24"
-  certSANs:
-    - vip.cluster.local
-    - 127.0.0.1
   extraVolumes:
   - name: timezone
     hostPath: /etc/localtime
@@ -740,7 +742,7 @@ apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration
 mode: ipvs
 ---
-apiVersion: kubelet.config.k8s.io/v1beta1
+apiVersion: kubelet.config.k8s.io/v1
 kind: KubeletConfiguration
 serializeImagePulls: false
 containerLogMaxSize: 100Mi
@@ -753,7 +755,7 @@ clusterDNS:
 cgroupDriver: systemd
 containerRuntimeEndpoint: unix:///var/run/containerd/containerd.sock
 imageServiceEndpoint: unix:///var/run/containerd/containerd.sock
-cpuManagerPolicy: none
+cpuManagerPolicy: None
 evictionHard:
   imagefs.available: 15%
   memory.available: 300Mi
