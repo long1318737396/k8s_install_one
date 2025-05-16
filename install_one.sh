@@ -693,8 +693,10 @@ nodeRegistration:
 apiServer:
   timeoutForControlPlane: 4m0s
   extraArgs:
-    default-not-ready-toleration-seconds: "300"
-    default-unreachable-toleration-seconds: "300"
+    - name: default-not-ready-toleration-seconds
+      value: "300"
+    - name: default-unreachable-toleration-seconds
+      value: "300"
 apiVersion: kubeadm.k8s.io/v1beta4
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
@@ -791,9 +793,9 @@ if [ "$zone" == "cn" ];then
 fi
 
 if [ "$role" == "node" ];then
-  kubeadm join --config kubeadm-join-node.yaml
+  kubeadm join --config kubeadm-join-node.yaml --v 5
 else
-  kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs
+  kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs --v 5
 fi
 
 
