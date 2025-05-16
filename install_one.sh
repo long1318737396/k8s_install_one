@@ -873,9 +873,9 @@ else
     fi
   elif [ "$cni_type" == "calico" ];then
     if [ "$zone" == "cn" ];then
-      kubectl apply -f ${base_url}/https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/tigera-operator.yaml
+      kubectl apply -f ${base_url}/https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/calico.yaml
     else
-      kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/tigera-operator.yaml
+      kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${calico_version}/manifests/calico.yaml
     fi
   else 
     echo "cni_type is not valid"
