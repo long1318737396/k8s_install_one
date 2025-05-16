@@ -145,6 +145,7 @@ if [ -z "$IP_ADDRESS" ]; then
   exit 1
 fi
 
+local_ip=$IP_ADDRESS
 # 获取旧主机名
 OLD_HOSTNAME=$(hostname)
 # 将 IP 地址中的点替换为破折号
@@ -694,7 +695,7 @@ apiServer:
   extraArgs:
     default-not-ready-toleration-seconds: "300"
     default-unreachable-toleration-seconds: "300"
-apiVersion: kubeadm.k8s.io/v1beta3
+apiVersion: kubeadm.k8s.io/v1beta4
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controllerManager:
