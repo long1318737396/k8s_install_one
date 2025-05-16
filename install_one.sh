@@ -287,14 +287,15 @@ tar -zxvf etcd-${etcd_version}-linux-${ARCH}.tar.gz -C ${bin_dir} --strip-compon
 
 chmod +x ${bin_dir}/etcd*
 
-tar zxvf nerdctl-full-${nerdctl_full_version}-linux-${ARCH}.tar.gz -C /usr/local/bin
+mkdir -p /usr/local/bin
+tar -zxvf nerdctl-full-${nerdctl_full_version}-linux-${ARCH}.tar.gz -C /usr/local/
 /bin/cp /usr/local/bin/lib/systemd/system/*.service /etc/systemd/system/
 mkdir -p /opt/cni/bin
 /bin/cp /usr/local/bin/libexec/cni/* /opt/cni/bin/
 #sed -i "s@/usr/local/bin@${bin_dir}@g" /etc/systemd/system/buildkit.service
 #sed -i "s@/usr/local/bin@${bin_dir}@g" /etc/systemd/system/containerd.service
 
-systemctl enable buildkit containerd 
+systemctl enable buildkit containerd
 systemctl start buildkit containerd 
 if [ $? -ne 0 ];then
   echo "containerd service start failed"
@@ -474,7 +475,8 @@ chmod +x ${bin_dir}/docker-compose
 tar -zxvf docker-${docker_version}.tgz 
 /bin/cp docker/docker* ${bin_dir}/
 
-sudo cat > /usr/lib/systemd/system/docker.service << EOF
+mkdir -p /usr/lib/systemd/system
+cat > /usr/lib/systemd/system/docker.service << EOF
 [Unit]
 Description=Docker Application Container Engine
 Documentation=https://docs.docker.com
