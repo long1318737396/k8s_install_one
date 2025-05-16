@@ -917,9 +917,8 @@ else
 
 ##----对k8s镜像进行替换---------
   if [ "$zone" == "cn" ];then
-    kubectl set image  -n environment deployment nfs-subdir-external-provisioner nfs-subdir-external-provisioner=k8s.dockerproxy.com/sig-storage/nfs-subdir-external-provisioner:v4.0.2
-    curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml | sed 's|registry.k8s.io|docker.gh-proxy.com|g' | kubectl apply -f -
+    kubectl apply -f  ${base_url}/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml
   else 
-    curl -s https://mirror.ghproxy.com/https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml  | kubectl apply -f -
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml
   fi
 fi
