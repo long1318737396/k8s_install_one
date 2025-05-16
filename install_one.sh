@@ -691,9 +691,16 @@ nodeRegistration:
   taints: null
 skipPhases:
   - addon/nginx-proxy
+timeouts:
+  controlPlaneComponentHealthCheck: 4m0s
+  discovery: 5m0s
+  etcdAPICall: 2m0s
+  kubeletHealthCheck: 4m0s
+  kubernetesAPICall: 1m0s
+  tlsBootstrap: 5m0s
+  upgradeManifests: 5m0s
 ---
 apiServer:
-  timeoutForControlPlane: 4m0s
   certSANs:
     - vip.cluster.local
     - 127.0.0.1
@@ -704,6 +711,8 @@ apiServer:
       value: "300"
 apiVersion: kubeadm.k8s.io/v1beta4
 certificatesDir: /etc/kubernetes/pki
+caCertificateValidityPeriod: 876000h0m0s
+certificateValidityPeriod: 876000h0m0s
 clusterName: kubernetes
 controllerManager:
   extraArgs:
@@ -742,7 +751,7 @@ apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration
 mode: ipvs
 ---
-apiVersion: kubelet.config.k8s.io/v1
+apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
 serializeImagePulls: false
 containerLogMaxSize: 100Mi
