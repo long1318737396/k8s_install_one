@@ -164,23 +164,28 @@ echo "新的主机名已设置为: $HOSTNAME"
 
 #--------安装nfs相关组件----------
 
-mkdir -p ${nfs_path}
-chmod -R 777 ${nfs_path}
-echo "${nfs_path} *(rw,sync,no_root_squash,no_subtree_check)" | sudo tee  /etc/exports
-exportfs -ra
-if [ -f /etc/debian_version ]; then
-  systemctl enable nfs-kernel-server
-  systemctl restart nfs-kernel-server
-
-elif [ -f /etc/redhat-release ]; then
-  systemctl enable rpcbind --now
-  systemctl enable nfs-server
-  systemctl start nfs-server
+if [ "$role" == "node" ];then
+  echo "this is node"
 else
-  echo "this os is not support"
-  exit 1
+  mkdir -p ${nfs_path}
+  chmod -R 777 ${nfs_path}
+  echo "${nfs_path} *(rw,sync,no_root_squash,no_subtree_check)" | sudo tee  /etc/exports
+  exportfs -ra
+  if [ -f /etc/debian_version ]; then
+    systemctl enable nfs-kernel-server
+    systemctl restart nfs-kernel-server
+    showmount -e localhost
+  elif [ -f /etc/redhat-release ]; then
+    systemctl enable rpcbind --now
+    systemctl enable nfs-server
+    systemctl start nfs-server
+    showmount -e localhost
+  else
+    echo "this os is not support"
+    exit 1
+  fi
 fi
-showmount -e localhost
+
 
 #-----大陆区下载----------------
 docker_url="https://download.docker.com/linux/static/stable/${arch}/docker-${docker_version}.tgz"
@@ -788,7 +793,7 @@ EOF
 
 
 tee kubeadm-join-node.yaml <<EOF
-apiVersion: kubeadm.k8s.io/v1beta3
+apiVersion: kubeadm.k8s.io/v1beta4
 caCertPath: /etc/kubernetes/pki/ca.crt
 discovery:
   bootstrapToken: 
@@ -919,7 +924,11 @@ else
     kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.3/config/manifests/metallb-frr-k8s.yaml
   fi
 
-
+  if [ "$zone" == "cn" ];then
+    kubectl apply -f ${base_url}/https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml
+  else
+    kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml
+  fi
 
   helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace=environment --create-namespace \
     --set nfs.server="${local_ip}" \
