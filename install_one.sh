@@ -166,7 +166,7 @@ echo "新的主机名已设置为: $HOSTNAME"
 
 mkdir -p ${nfs_path}
 chmod -R 777 ${nfs_path}
-echo "${nfs_path} *(rw,sync,no_root_squash,no_subtree_check)" | sudo tee -a /etc/exports
+echo "${nfs_path} *(rw,sync,no_root_squash,no_subtree_check)" | sudo tee  /etc/exports
 exportfs -ra
 if [ -f /etc/debian_version ]; then
   systemctl enable nfs-kernel-server
@@ -238,7 +238,7 @@ if [ $zone == "cn" ];then
   for package_url in "${packages[@]}"; do
     filename=$(basename "$package_url")
     if [ ! -f "$filename" ];then
-      curl  -k -L -C - -o "$filename" ${base_url}/"$package_url"
+      wget -O "$filename" ${base_url}/"$package_url"
       echo "Downloaded $filename"
     else
       echo "$filename is existed"
@@ -248,7 +248,7 @@ else
   for package_url in "${packages[@]}"; do
     filename=$(basename "$package_url") 
     if [ ! -f "$filename" ];then
-      curl  -k -L -C - -o "$filename" "$package_url"
+      wget -O "$filename" "$package_url"
       echo "Downloaded $filename"
     else
       echo "$filename is existed"
@@ -266,18 +266,16 @@ if [ -f "hubble-linux-${ARCH}.tar.gz" ];then
 fi
 if [ -f "ecapture-${ecapture_version}-linux-${ARCH}.tar.gz" ];then
   tar -zxvf ecapture-${ecapture_version}-linux-${ARCH}.tar.gz
-  /bin/cp ecapture-${ecapture_version}-linux-${ARCH}/capture ${bin_dir}/ecapture  
+  /bin/cp ecapture-${ecapture_version}-linux-${ARCH}/ecapture ${bin_dir}/ecapture  
 fi
 if [ -f "ptcpdump-${pcpdump_version}-linux-${ARCH}.tar.gz" ];then
   tar -zxvf ptcpdump-${pcpdump_version}-linux-${ARCH}.tar.gz
   /bin/cp ptcpdump ${bin_dir}/ptcpdump
 fi
-if [ -f "calicoctl-linux-${ARCH}.tar.gz" ];then
-  tar -zxvf calicoctl-linux-${ARCH}.tar.gz
+if [ -f "calicoctl-linux-${ARCH}" ];then
   /bin/cp calicoctl-linux-${ARCH} ${bin_dir}/calicoctl
 fi
-if [ -f "skopeo-linux-${ARCH}.tar.gz" ];then
-  tar -zxvf skopeo-linux-${ARCH}.tar.gz
+if [ -f "skopeo-linux-${ARCH}" ];then
   /bin/cp skopeo-linux-${ARCH} ${bin_dir}/skopeo
 fi
 chmod +x ${bin_dir}/{cilium,hubble,skopeo,ecapture,ptcpdump,calicoctl}
@@ -325,7 +323,11 @@ EOF
 mkdir -p /etc/containerd/
 containerd config default > /etc/containerd/config.toml
 sed -i 's/SystemdCgroup\ =\ false/SystemdCgroup\ =\ true/g' /etc/containerd/config.toml
-sed -i  's|sandbox_image = "registry.k8s.io/pause:3.10"|sandbox_image = "registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.10"|g' /etc/containerd/config.toml
+if [ "$zone" == "cn" ];then
+  sed -i  's|sandbox = "registry.k8s.io/pause:3.10"|sandbox_image = "registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.10"|g' /etc/containerd/config.toml
+else
+  echo "not in china"
+fi
 sed -i "s#/var/lib/containerd#$containerd_data#g" /etc/containerd/config.toml
 
 
@@ -527,6 +529,7 @@ if [ $? -ne 0 ];then
   exit 1
 fi
 
+mkdir -p /usr/lib/docker/cli-plugins
 if [ ! -f /usr/lib/docker/cli-plugins/docker-buildx ];then
    if [ "$zone" == "cn" ];then
      curl -fSL ${base_url}/${docker_buildx_url} -o /usr/lib/docker/cli-plugins/docker-buildx
@@ -820,9 +823,13 @@ if [ $? -ne 0 ];then
   echo "failed"
   exit 1
 else
-  mkdir -p $HOME/.kube
-  sudo /bin/cp  /etc/kubernetes/admin.conf $HOME/.kube/config
-  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  if [ "$role" == "node" ];then
+    echo "this is node"
+  else
+    mkdir -p $HOME/.kube
+    sudo /bin/cp  /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  fi
 fi
 
 if [ "$role" == "node" ];then
