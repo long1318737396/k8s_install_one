@@ -183,7 +183,7 @@ fi
 showmount -e localhost
 
 #-----大陆区下载----------------
-docker_url="https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable/${arch}/docker-${docker_version}.tgz"
+docker_url="https://download.docker.com/linux/static/stable//${arch}/docker-${docker_version}.tgz"
 nerdctl_full_url="https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-$ARCH.tar.gz"
 kubernetes_server_url="https://dl.k8s.io/release/${k8s_version}/kubernetes-server-linux-${ARCH}.tar.gz"
 skopeo_url="https://github.com/lework/skopeo-binary/releases/download/${skopeo_version}/skopeo-linux-${ARCH}"
@@ -205,7 +205,11 @@ docker_buildx_url="https://github.com/docker/buildx/releases/download/${docker_b
 if [ -f "docker-${docker_version}.tgz" ];then 
   echo "docker-${docker_version}.tgz is existed"
 else
-  curl  -k -L -C - -o docker-${docker_version}.tgz ${docker_url}
+  if [ "$zone" == "cn" ];then
+    curl  -k -L -C - -o docker-${docker_version}.tgz ${base_url}/${docker_url}
+  else
+    curl  -k -L -C - -o docker-${docker_version}.tgz ${docker_url}
+  fi
 fi
 if [ -f "kubernetes-server-linux-${ARCH}.tar.gz" ];then
   echo "kubernetes-server-linux-${ARCH}.tar.gz is existed"
