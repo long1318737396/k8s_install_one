@@ -183,7 +183,7 @@ fi
 showmount -e localhost
 
 #-----大陆区下载----------------
-docker_url="https://download.docker.com/linux/static/stable//${arch}/docker-${docker_version}.tgz"
+docker_url="https://download.docker.com/linux/static/stable/${arch}/docker-${docker_version}.tgz"
 nerdctl_full_url="https://github.com/containerd/nerdctl/releases/download/v${nerdctl_full_version}/nerdctl-full-${nerdctl_full_version}-linux-$ARCH.tar.gz"
 kubernetes_server_url="https://dl.k8s.io/release/${k8s_version}/kubernetes-server-linux-${ARCH}.tar.gz"
 skopeo_url="https://github.com/lework/skopeo-binary/releases/download/${skopeo_version}/skopeo-linux-${ARCH}"
@@ -266,7 +266,7 @@ if [ -f "hubble-linux-${ARCH}.tar.gz" ];then
 fi
 if [ -f "ecapture-${ecapture_version}-linux-${ARCH}.tar.gz" ];then
   tar -zxvf ecapture-${ecapture_version}-linux-${ARCH}.tar.gz
-  /bin/cp ecapture-${ecapture_version}-linux-${ARCH} ${bin_dir}/ecapture  
+  /bin/cp ecapture-${ecapture_version}-linux-${ARCH}/capture ${bin_dir}/ecapture  
 fi
 if [ -f "ptcpdump-${pcpdump_version}-linux-${ARCH}.tar.gz" ];then
   tar -zxvf ptcpdump-${pcpdump_version}-linux-${ARCH}.tar.gz
