@@ -4,7 +4,7 @@ arch=`arch`
 if [ "$arch" == "x86_64" ];then
   ARCH=amd64
 elif [ "$arch" == "aarch64" ];then
-  ARCH=aarch64
+  ARCH=arm64
 else
   echo "this arch is not unsupport"
   exit 1
