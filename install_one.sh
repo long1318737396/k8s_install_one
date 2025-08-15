@@ -688,7 +688,7 @@ fi
 if [ "$role" == "node" ];then
   kubeadm join --config kubeadm-join-node.yaml --v 5
 else
-  kubeadm init --pod-network-cidr 10.144.0.0/16 --v 5
+  kubeadm init --pod-network-cidr 10.244.0.0/16 --v 5
 fi
 
 
