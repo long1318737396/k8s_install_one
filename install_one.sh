@@ -57,7 +57,7 @@ docker_buildx_version="v0.23.0"
 
 
 bin_dir=/usr/bin
-cni_type=calico
+cni_type=flannel
 base_url=https://ghfast.top
 
 
@@ -517,7 +517,6 @@ tee /etc/docker/daemon.json <<-'EOF'
     "exec-opts": ["native.cgroupdriver=systemd"],
     "insecure-registries" : ["registry.mydomain.com:5000"],
     "log-driver": "json-file",
-    "data-root": "${docker_data_root}",
     "log-opts": {
         "max-size": "100m",
         "max-file": "10"
@@ -711,7 +710,7 @@ if [ "$role" == "node" ];then
 else
   echo "this is master"
   
-  kubectl taint node ${HOSTNAME} node-role.kubernetes.io/control-plane:NoSchedule-
+  kubectl taint node ${HOSTNAME} node-role.kubernetes.io/master:NoSchedule-
   if [ "$zone" == "cn" ];then
     kubectl apply -f ${base_url}/https://github.com/kubernetes-sigs/gateway-api/releases/download/${gateway_api_version}/experimental-install.yaml
   else
