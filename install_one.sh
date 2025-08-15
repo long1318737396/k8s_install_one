@@ -19,9 +19,9 @@ containerd_data="/data/kubernetes/containerd"
 #https://github.com/containerd/nerdctl/releases
 nerdctl_full_version=2.1.1
 #https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable/x86_64/
-docker_version=28.1.1
+docker_version=17.03.0-ce
 #https://github.com/kubernetes/kubernetes/releases
-k8s_version=v1.33.0
+k8s_version=v1.12.10
 #kubernetes_server_version=1.29.2
 #https://github.com/lework/skopeo-binary/releases
 skopeo_version=v1.18.0
@@ -677,139 +677,8 @@ echo "source <(kubectl completion bash)" >> ~/.bashrc
 echo "source <(helm completion bash)" >> ~/.bashrc
 echo "source <(kubeadm completion bash)" >> ~/.bashrc
 
-kubeadm config print init-defaults > kubeadm-init.yaml
-kubeadm config print join-defaults > kubeadm-join.yaml
-
-
-tee kubeadm-${k8s_version}-init.yaml <<EOF
-apiVersion: kubeadm.k8s.io/v1beta4
-bootstrapTokens:
-- groups:
-  - system:bootstrappers:kubeadm:default-node-token
-  token: abcdef.0123456789abcdef
-  ttl: 24h0m0s
-  usages:
-  - signing
-  - authentication
-kind: InitConfiguration
-certificateKey: 24dd608dcf62f3040e5ec3df4903739f02506f1b5bf1010e6167a8da9f8e569b
-localAPIEndpoint:
-  advertiseAddress: ${local_ip}
-  bindPort: 6443
-nodeRegistration:
-  criSocket: unix:///var/run/containerd/containerd.sock
-  imagePullPolicy: IfNotPresent
-  name: ${HOSTNAME}
-  taints: null
-#skipPhases:
-#  - addon/kube-proxy
-timeouts:
-  controlPlaneComponentHealthCheck: 4m0s
-  discovery: 5m0s
-  etcdAPICall: 2m0s
-  kubeletHealthCheck: 4m0s
-  kubernetesAPICall: 1m0s
-  tlsBootstrap: 5m0s
-  upgradeManifests: 5m0s
----
-apiServer:
-  certSANs:
-    - vip.cluster.local
-    - 127.0.0.1
-  extraArgs:
-    - name: default-not-ready-toleration-seconds
-      value: "300"
-    - name: default-unreachable-toleration-seconds
-      value: "300"
-apiVersion: kubeadm.k8s.io/v1beta4
-certificatesDir: /etc/kubernetes/pki
-caCertificateValidityPeriod: 876000h0m0s
-certificateValidityPeriod: 876000h0m0s
-clusterName: kubernetes
-controllerManager:
-  extraArgs:
-    - name: node-cidr-mask-size-ipv4
-      value: "24"
-  extraVolumes:
-  - name: timezone
-    hostPath: /etc/localtime
-    mountPath: /etc/localtime
-    readOnly: true
-dns: {}
-etcd:
-  local:
-    dataDir: ${etcd_data}
-    extraArgs:
-      - name: quota-backend-bytes
-        value: "32768000000"
-      - name: auto-compaction-mode
-        value: periodic
-imageRepository: registry.k8s.io
-kind: ClusterConfiguration
-kubernetesVersion: ${k8s_version}
-networking:
-  dnsDomain: cluster.local
-  serviceSubnet: 10.96.0.0/12
-  podSubnet: "10.244.0.0/16"
-scheduler: 
-  extraVolumes:
-  - name: timezone
-    hostPath: /etc/localtime
-    mountPath: /etc/localtime
-    readOnly: true
-controlPlaneEndpoint: ${local_ip}:6443
----
-apiVersion: kubeproxy.config.k8s.io/v1alpha1
-kind: KubeProxyConfiguration
-mode: ipvs
----
-apiVersion: kubelet.config.k8s.io/v1beta1
-kind: KubeletConfiguration
-serializeImagePulls: false
-containerLogMaxSize: 100Mi
-containerLogMaxFiles: 10
-maxPods: 128
-podPidsLimit: 16384
-clusterDNS:
-- 10.96.0.10
-cgroupDriver: systemd
-containerRuntimeEndpoint: unix:///var/run/containerd/containerd.sock
-imageServiceEndpoint: unix:///var/run/containerd/containerd.sock
-cpuManagerPolicy: none
-evictionHard:
-  imagefs.available: 15%
-  memory.available: 300Mi
-  nodefs.available: 10%
-  nodefs.inodesFree: 5%
-systemReserved:
-    cpu: 100m
-    memory: 100Mi
-    pid: "1000"
-kubeReserved:
-    cpu: 100m
-    memory: 100Mi
-    pid: "1000"
-EOF
-
-
-tee kubeadm-join-node.yaml <<EOF
-apiVersion: kubeadm.k8s.io/v1beta4
-caCertPath: /etc/kubernetes/pki/ca.crt
-discovery:
-  bootstrapToken: 
-    apiServerEndpoint: ${master_ip}:6443
-    token: abcdef.0123456789abcdef
-    unsafeSkipCAVerification: true
-  timeout: 5m0s
-  tlsBootstrapToken: abcdef.0123456789abcdef
-kind: JoinConfiguration
-nodeRegistration:
-  kubeletExtraArgs:
-    cgroup-driver: systemd
-  criSocket: unix:///var/run/containerd/containerd.sock
-  imagePullPolicy: IfNotPresent
-  taints: null
-EOF
+# kubeadm config print init-defaults > kubeadm-init.yaml
+# kubeadm config print join-defaults > kubeadm-join.yaml
 
 
 
@@ -820,7 +689,7 @@ fi
 if [ "$role" == "node" ];then
   kubeadm join --config kubeadm-join-node.yaml --v 5
 else
-  kubeadm init --config kubeadm-${k8s_version}-init.yaml --upload-certs --v 5
+  kubeadm init --pod-network-cidr 10.144.0.0/16 --v 5
 fi
 
 
@@ -883,9 +752,9 @@ else
       --set loadBalancer.mode=dsr
   elif [ "$cni_type" == "flannel" ];then
     if [ "$zone" == "cn" ];then
-      kubectl apply -f ${base_url}/https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+      kubectl apply -f ${base_url}/https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
     else
-      kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+      kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
     fi
   elif [ "$cni_type" == "calico" ];then
     if [ "$zone" == "cn" ];then
@@ -897,7 +766,8 @@ else
     echo "cni_type is not valid"
     exit 1
   fi
-
+  wget https://github.com/containernetworking/plugins/releases/download/v0.8.6/cni-plugins-linux-amd64-v0.8.6.tgz
+  tar zxvf cni-plugins-linux-amd64-v0.8.6.tgz -C /opt/cni/bin
 
   kubectl create deployment net-tools --image long1318737396/net-tools
   kubectl expose deployment net-tools --port 80 --target-port 80 --type NodePort
