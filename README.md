@@ -1,11 +1,21 @@
+# Kubernetes 一键安装脚本
+
+## 项目介绍
+
+本项目提供了一键安装 Kubernetes 集群的脚本，支持多种运行时（containerd、docker、cri-o）和多种网络插件（Cilium、Flannel、Calico）。
+
+## 目录结构
+
+```
 ## 一键安装
 - master节点
 
 ```bash
 export zone=cn
-export k8s_version=v1.33.0
+export k8s_version=v1.34.0
 export cni_type=calico
-curl -sSL https://raw.githubusercontent.com/long1318737396/k8s_install_one/refs/tags/${k8s_version}/install_one.sh | bash
+export runtime=containerd
+git clone --branch=release-1.34 https://github.com/long1318737396/k8s_install_one.git && cd k8s_install_one && bash main.sh
 ```
 - node节点
 
