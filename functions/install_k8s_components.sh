@@ -56,6 +56,8 @@ EOF
 
   systemctl enable --now kubelet
   echo "source <(kubectl completion bash)" >> ~/.bashrc
+  tar -zxvf helm-v${helm_version}-linux-${ARCH}.tar.gz
+  cp linux-${ARCH}/helm ${bin_dir}/
   echo "source <(helm completion bash)" >> ~/.bashrc
   echo "source <(kubeadm completion bash)" >> ~/.bashrc
 

@@ -14,6 +14,7 @@ download_packages() {
     "$cfssl_certinfo"
     "$ecapture_url"
     "$pcpdump_url"
+    "$helm_url"
   )
 
   # 根据选择的运行时添加相应的包

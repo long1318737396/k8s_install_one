@@ -23,6 +23,7 @@ setup_download_urls() {
   docker_buildx_url="https://github.com/docker/buildx/releases/download/${docker_buildx_version}/buildx-${docker_buildx_version}.linux-${ARCH}"
   crio_url="https://storage.googleapis.com/cri-o/artifacts/cri-o.${ARCH}.v${crio_version}.tar.gz"
   cri_docker_url="https://github.com/Mirantis/cri-dockerd/releases/download/v${cri_docker_version}/cri-dockerd-${cri_docker_version}.${ARCH}.tgz"
+  helm_url="https://get.helm.sh/helm-v${helm_version}-linux-${ARCH}.tar.gz"
   
   echo "Download URLs setup completed."
 }
