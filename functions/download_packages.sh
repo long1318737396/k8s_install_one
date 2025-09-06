@@ -27,6 +27,7 @@ download_packages() {
       "$docker_url"
       "$docker_compose_url"
       "$docker_buildx_url"
+      "$cri_docker_url"
     )
   elif [ "${runtime}" == "crio" ]; then
     runtime_packages=(
