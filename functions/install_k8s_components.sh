@@ -94,7 +94,7 @@ EOF
   if [ "${runtime}" == "containerd" ];then
     echo "  criSocket: unix:///var/run/containerd/containerd.sock" >> "kubeadm-${k8s_version}-init.yaml"
   elif [ "${runtime}" == "docker" ];then
-    echo "  criSocket: /var/run/cri-docker.sock" >> "kubeadm-${k8s_version}-init.yaml"
+    echo "  criSocket: /var/run/cri-dockerd.sock" >> "kubeadm-${k8s_version}-init.yaml"
   elif [ "${runtime}" == "crio" ];then
     echo "  criSocket: /var/run/crio/crio.sock" >> "kubeadm-${k8s_version}-init.yaml"
   fi
