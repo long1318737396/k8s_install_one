@@ -80,7 +80,21 @@ EOF
 
   if [ -f "cri-dockerd-${cri_docker_version}.${ARCH}.tgz" ];then
     tar -zxvf "cri-dockerd-${cri_docker_version}.${ARCH}.tgz"
-    /bin/cp "cri-dockerd-${cri_docker_version}.${ARCH}/cri-dockerd" "${bin_dir}/"
+    /bin/cp "cri-dockerd/cri-dockerd" "${bin_dir}/"
+    cat > /etc/systemd/system/cri-docker.socket << EOF
+[Unit]
+Description=CRI Docker Socket for the API
+PartOf=cri-docker.service
+
+[Socket]
+ListenStream=/var/run/cri-dockerd.sock
+SocketMode=0666
+SocketUser=root
+SocketGroup=root
+
+[Install]
+WantedBy=sockets.target
+EOF
     cat > /usr/lib/systemd/system/cri-docker.service << EOF
 [Unit]
 Description=CRI Interface for Docker Application Container Engine
