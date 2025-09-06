@@ -10,11 +10,21 @@ install_k8s_components() {
     echo "source <(crictl completion bash)" >> ~/.bashrc
   fi
 
-  echo "runtime-endpoint: unix:///var/run/containerd/containerd.sock
-image-endpoint: unix:////var/run/containerd/containerd.sock
-#runtime-endpoint: unix:///var/run/crio/crio.sock
-timeout: 10
-#debug: true" > /etc/crictl.yaml
+  # 根据运行时配置crictl.yaml
+  if [ "${runtime}" == "containerd" ];then
+    echo "runtime-endpoint: unix:///var/run/containerd/containerd.sock
+image-endpoint: unix:///var/run/containerd/containerd.sock
+timeout: 10" > /etc/crictl.yaml
+  elif [ "${runtime}" == "docker" ];then
+    echo "runtime-endpoint: unix:///var/run/containerd/containerd.sock
+image-endpoint: unix:///var/run/containerd/containerd.sock
+runtime-endpoint: unix:///var/run/cri-dockerd.sock
+timeout: 10" > /etc/crictl.yaml
+  elif [ "${runtime}" == "crio" ];then
+    echo "runtime-endpoint: unix:///var/run/crio/crio.sock
+image-endpoint: unix:///var/run/crio/crio.sock
+timeout: 10" > /etc/crictl.yaml
+  fi
 
   if [ -f "kubernetes-server-linux-${ARCH}.tar.gz" ]; then
     tar -zxvf "kubernetes-server-linux-${ARCH}.tar.gz"
@@ -204,7 +214,17 @@ kind: JoinConfiguration
 nodeRegistration:
   kubeletExtraArgs:
     cgroup-driver: systemd
-  criSocket: unix:///var/run/containerd/containerd.sock
+EOF
+
+  if [ "${runtime}" == "containerd" ];then
+    echo "  criSocket: unix:///var/run/containerd/containerd.sock" >> kubeadm-join-node.yaml
+  elif [ "${runtime}" == "docker" ];then
+    echo "  criSocket: /var/run/cri-dockerd.sock" >> kubeadm-join-node.yaml
+  elif [ "${runtime}" == "crio" ];then
+    echo "  criSocket: /var/run/crio/crio.sock" >> kubeadm-join-node.yaml
+  fi
+
+  tee -a kubeadm-join-node.yaml <<EOF
   imagePullPolicy: IfNotPresent
   taints: null
 EOF
