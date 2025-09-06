@@ -6,11 +6,11 @@ install_docker() {
   
   if [ ! -f "docker-${docker_version}.tgz" ]; then
     echo "Docker package not found, skipping Docker installation"
-    return
+    exit 1
   fi
 
   tar -zxvf "docker-${docker_version}.tgz" 
-  /bin/cp docker/docker* "${bin_dir}/"
+  /bin/cp docker/* "${bin_dir}/"
 
   mkdir -p /usr/lib/systemd/system
   cat > /usr/lib/systemd/system/docker.service << EOF
