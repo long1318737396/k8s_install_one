@@ -19,7 +19,7 @@ timeout: 10
   if [ -f "kubernetes-server-linux-${ARCH}.tar.gz" ]; then
     tar -zxvf "kubernetes-server-linux-${ARCH}.tar.gz"
     /bin/cp kubernetes/server/bin/{kubelet,kubectl,kubeadm} "$bin_dir/"
-    chmod +x "$bin_dir/{kubeadm,kubelet,kubectl}"
+    chmod +x  $bin_dir/{kubeadm,kubelet,kubectl}
   fi
 
   tee /etc/systemd/system/kubelet.service <<EOF

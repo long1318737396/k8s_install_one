@@ -87,7 +87,7 @@ Description=CRI Docker Socket for the API
 PartOf=cri-docker.service
 
 [Socket]
-ListenStream=/var/run/cri-dockerd.sock
+ListenStream=%t/cri-dockerd.sock
 SocketMode=0666
 SocketUser=root
 SocketGroup=root
