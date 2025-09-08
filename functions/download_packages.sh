@@ -58,7 +58,7 @@ download_packages() {
       filename=$(basename "$package_url")
       if [ ! -f "$filename" ];then
         echo "Downloading $filename..."
-        wget -O "$filename" "${base_url}/$package_url"
+        wget -4 -O "$filename" "${base_url}/$package_url"
         echo "Downloaded $filename"
       else
         echo "$filename is existed"
@@ -70,7 +70,7 @@ download_packages() {
       filename=$(basename "$package_url") 
       if [ ! -f "$filename" ];then
         echo "Downloading $filename..."
-        wget -O "$filename" "$package_url"
+        wget -4 -O "$filename" "$package_url"
         echo "Downloaded $filename"
       else
         echo "$filename is existed"

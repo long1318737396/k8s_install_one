@@ -132,6 +132,7 @@ parse_args() {
             *)
                 echo "Unknown option: $1"
                 show_help
+                exit 0
                 ;;
         esac
     done
@@ -220,4 +221,4 @@ main() {
 }
 
 # 执行主函数
-main
+main "$@"
