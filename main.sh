@@ -28,7 +28,7 @@ nerdctl_full_version=2.1.4
 #https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable/x86_64/
 docker_version=28.1.1
 #https://github.com/kubernetes/kubernetes/releases
-k8s_version=${k8s_version:-"v1.34.0"}
+k8s_version=${k8s_version:-"v1.34.1"}
 #kubernetes_server_version=1.29.2
 #https://github.com/lework/skopeo-binary/releases
 skopeo_version=v1.18.0
