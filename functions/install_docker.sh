@@ -130,3 +130,5 @@ EOF
   
   echo "Docker installed."
 }
+
+systemctl start cri-docker --now
