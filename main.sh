@@ -64,6 +64,7 @@ docker_buildx_version="v0.23.0"
 #https://github.com/cri-o/cri-o/releases#downloads
 crio_version=1.33.4
 cri_docker_version=0.3.20
+containernetworking=1.8
 
 # 导入其他脚本文件
 source ./functions/init_workdir.sh

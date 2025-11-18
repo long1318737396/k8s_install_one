@@ -3,7 +3,8 @@
 # 部署CNI网络插件和其他组件
 deploy_cni_and_components() {
   echo "Deploying CNI and components..."
-  
+  pwd
+  tar -zxvf "cni-plugins-linux-${ARCH}-v${containernetworking}.tgz" -C /opt/cni/bin/
   if [ "$role" == "node" ];then
     echo "this is node"
   else

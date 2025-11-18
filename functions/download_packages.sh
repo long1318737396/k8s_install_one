@@ -15,6 +15,7 @@ download_packages() {
     "$ecapture_url"
     "$pcpdump_url"
     "$helm_url"
+    "$containernetworking"
   )
 
   # 根据选择的运行时添加相应的包
