@@ -12,10 +12,10 @@
 
 ```bash
 export zone=cn
-export k8s_version=v1.34.0
+export k8s_version=v1.35.0
 export cni_type=calico
 export runtime=containerd
-git clone --branch=release-1.34 https://github.com/long1318737396/k8s_install_one.git && cd k8s_install_one && bash main.sh
+git clone --branch=release-1.35 https://github.com/long1318737396/k8s_install_one.git && cd k8s_install_one && bash main.sh
 ```
 - node节点
 
